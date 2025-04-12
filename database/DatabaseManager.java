@@ -40,7 +40,7 @@ public class DatabaseManager {
     }
 
     private void createTables() {
-        try (Statement stmt = connection.createStatement()) {
+        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_logs (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "player VARCHAR(16), " +
@@ -51,7 +51,21 @@ public class DatabaseManager {
         }
     }
 
-    public Connection getConnection() {
+    public Connection getConnection() throws SQLException {
+        if (connection == null || connection.isClosed()) {
+            connect();
+        }
         return connection;
+    }
+
+    public void closeConnection() {
+        if (connection != null) {
+            try {
+                connection.close();
+                plugin.getLogger().info("✅ Соединение с базой данных закрыто.");
+            } catch (SQLException e) {
+                plugin.getLogger().severe("❌ Ошибка при закрытии соединения с базой данных: " + e.getMessage());
+            }
+        }
     }
 }

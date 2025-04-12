@@ -1,53 +1,48 @@
 package zorahm.zochat.commands;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import zorahm.zochat.ChatConfig;
 import zorahm.zochat.ChatPlugin;
-import zorahm.zochat.MessageUtil;
-import zorahm.zochat.database.ChatLogger;
+import zorahm.zochat.MessageManager;
 
 public class ChatCommand implements CommandExecutor {
     private final ChatPlugin plugin;
-    private final ChatConfig chatConfig; // Добавлено поле для chatConfig
-    private final ChatLogger chatLogger; // Добавлено поле для chatLogger
+    private final ChatConfig chatConfig;
+    private final MessageManager messageManager;
 
-    public ChatCommand(ChatPlugin plugin, ChatConfig chatConfig, ChatLogger chatLogger) {
+    public ChatCommand(ChatPlugin plugin, ChatConfig chatConfig, MessageManager messageManager) {
         this.plugin = plugin;
         this.chatConfig = chatConfig;
-        this.chatLogger = chatLogger;
+        this.messageManager = messageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(MessageUtil.styledMessage("<red>Используйте /chat help для списка доступных команд.</red>"));
+            sender.sendMessage(Component.text("Использование: /chat <reload|help>"));
             return true;
         }
 
         switch (args[0].toLowerCase()) {
             case "reload":
+                // Перезагрузка конфигурации
                 plugin.reloadChatConfig();
-                sender.sendMessage(MessageUtil.styledMessage("<green>Конфигурация чата успешно перезагружена.</green>"));
-                break;
-
-            case "clear":
-                for (int i = 0; i < 100; i++) {
-                    sender.getServer().broadcast(MessageUtil.plainMessage(""));
-                }
-                sender.getServer().broadcast(MessageUtil.styledMessage("<green>Чат был очищен администратором.</green>"));
+                messageManager.reloadMessages();
+                sender.sendMessage(Component.text("Конфигурация и сообщения перезагружены!"));
                 break;
 
             case "help":
-                sender.sendMessage(MessageUtil.styledMessage("<gold>Список команд:</gold>"));
-                sender.sendMessage(MessageUtil.plainMessage("<gray>/chat reload</gray> - Перезагрузить конфигурацию чата."));
-                sender.sendMessage(MessageUtil.plainMessage("<gray>/chat clear</gray> - Очистить чат."));
-                sender.sendMessage(MessageUtil.plainMessage("<gray>/chat help</gray> - Показать это сообщение."));
+                // Отображение справки
+                for (Component line : messageManager.getMessages("chat.chat-help")) {
+                    sender.sendMessage(line);
+                }
                 break;
 
             default:
-                sender.sendMessage(MessageUtil.styledMessage("<red>Неизвестная команда. Используйте /chat help.</red>"));
+                sender.sendMessage(Component.text("Неизвестная команда. Используйте /chat help для справки."));
                 break;
         }
 
