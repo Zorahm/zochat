@@ -4,7 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class MessageUtil {
-    private static final MiniMessage miniMessage = MiniMessage.miniMessage();
+    public static final MiniMessage miniMessage = MiniMessage.miniMessage();
     private static final String PREFIX = "<#d45079>ChatPlugin</#d45079> <#c0c0c0>•</#c0c0c0> ";
 
     /**
