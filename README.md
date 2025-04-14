@@ -49,54 +49,56 @@
 После запуска плагина создаются два файла: config.yml и messages_ru.yml.
 
 ### Пример config.yml:
-
 ```yaml
-# Формат чата (используется, если не указан локальный или глобальный формат)
-chat-format: "<#d45079>SW</#d45079> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+# ════════════════════════════════════════════
+#            Конфигурация zoChat
+# ════════════════════════════════════════════
 
-# Таймер антиспама в секундах
-spam-cooldown: 3
+# Язык сообщений
+message: ru
 
-# Список запрещённых слов
-banned-words:
-  - плохое
-  - слово
-  - оскорбление
+# ───── Настройки антиспама ─────
+anti-spam:
+  enabled: false                        # Включить антиспам
+  local-cooldown: 3                    # Кулдаун для локального чата (в секундах)
+  global-cooldown: 5                   # Кулдаун для глобального чата (в секундах)
+  private-cooldown: 2                  # Кулдаун для личных сообщений (в секундах)
+  bypass-permission: "chat.spam.bypass" # Право для обхода антиспама
 
-# Настройки упоминаний через @
+# ───── Настройки для упоминаний ─────
 mention:
-  format: "<yellow><bold>@{player}</bold></yellow>" # Формат подсветки упоминания
+  format: "<yellow><bold>@{player}</bold></yellow>"  # Формат подсветки упоминания
   sound: "ENTITY_EXPERIENCE_ORB_PICKUP"             # Звук при упоминании
   message: "<yellow>Тебя упомянули в чате!</yellow>" # Уведомление через Action Bar
 
-# Настройки для приватных сообщений
-private-messages:
-  format: "<gradient:#f6a0d3:#b47ee5>✉ ЛС от {player}:</gradient> <white>{message}</white>"
-  reply-format: "<gradient:#b47ee5:#f6a0d3>✉ Вы → {player}:</gradient> <white>{message}</white>"
-
-# Настройки локального чата
+# ───── Настройки локального чата ─────
 local-chat:
-  enabled: true
-  radius: 50
-  format: "<#d45079>SW</#d45079> <gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
-  command: "/l"
+  enabled: true                        # Включить локальный чат
+  radius: 50                           # Радиус действия локального чата
+  format: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
+  command: "/lo"                       # Команда для локального чата
 
-# Настройки глобального чата
+# ───── Настройки глобального чата ─────
 global-chat:
-  enabled: true
-  format: "<#d45079>SW</#d45079> <gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
-  command: "/g"
+  enabled: true                        # Включить глобальный чат
+  format: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
+  command: "/g"                        # Команда для глобального чата
 
-# Настройки базы данных
+# ───── Настройки для приватных сообщений ─────
+private-messages:
+  format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Входящее сообщение
+  reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Исходящее сообщение
+
+# ───── Настройки базы данных для логирования чата ─────
 database:
-  type: "sqlite"
-  host: "localhost"
-  port: 3306
-  database: "minecraft_chat"
-  username: "root"
-  password: "password"
+  type: "sqlite"                        # Выберите тип базы данных: "sqlite" или "mysql"
+  mysql:
+    host: "localhost"                    # Адрес MySQL сервера
+    port: 3306                           # Порт MySQL сервера
+    database: "minecraft_chat"           # Название базы данных
+    username: "root"                     # Имя пользователя для подключения
+    password: "password"                 # Пароль для доступа к базе данных
 ```
-
 
 ### Пример messages_ru.yml:
 
