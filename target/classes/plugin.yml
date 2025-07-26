@@ -1,0 +1,45 @@
+name: zoChat
+version: 1.3
+main: zorahm.zochat.ChatPlugin
+api-version: 1.21
+description: A custom chat plugin for Minecraft servers with local/global chat, private messages, and more.
+author: ZorahM
+website: https://github.com/Zorahm/zochat
+depend:
+  - LuckPerms
+softdepend:
+  - Adventure
+commands:
+  chat:
+    description: Управление настройками чата
+    usage: /<command> [reload]
+    aliases: [zochat]
+  global:
+    description: Отправка сообщения в глобальный чат
+    usage: /<command> [сообщение]
+    aliases: [g]
+  local:
+    description: Отправка сообщения в локальный чат
+    usage: /<command> [сообщение]
+    aliases: [l]
+  msg:
+    description: Отправка приватного сообщения игроку
+    usage: /<command> <игрок> <сообщение>
+    aliases: [m, tell, w]
+  reply:
+    description: Ответ на последнее приватное сообщение
+    usage: /<command> <сообщение>
+    aliases: [r]
+permissions:
+  zochat.admin:
+    description: Доступ к админским командам плагина (например, /chat reload)
+    default: op
+  zochat.global:
+    description: Доступ к глобальному чату
+    default: true
+  zochat.local:
+    description: Доступ к локальному чату
+    default: true
+  zochat.msg:
+    description: Доступ к отправке приватных сообщений
+    default: true

@@ -1,0 +1,48 @@
+# ════════════════════════════════════════════
+#            Конфигурация zoChat
+# ════════════════════════════════════════════
+
+# Язык сообщений
+message: ru
+
+# ───── Настройки антиспама ─────
+anti-spam:
+  enabled: false                        # Включить антиспам
+  local-cooldown: 3                    # Кулдаун для локального чата (в секундах)
+  global-cooldown: 5                   # Кулдаун для глобального чата (в секундах)
+  private-cooldown: 2                  # Кулдаун для личных сообщений (в секундах)
+  bypass-permission: "chat.spam.bypass" # Право для обхода антиспама
+
+# ───── Настройки для упоминаний ─────
+mention:
+  format: "<yellow><bold>@{player}</bold></yellow>"  # Формат подсветки упоминания
+  sound: "ENTITY_EXPERIENCE_ORB_PICKUP"             # Звук при упоминании
+  message: "<yellow>Тебя упомянули в чате!</yellow>" # Уведомление через Action Bar
+
+# ───── Настройки локального чата ─────
+local-chat:
+  enabled: true                        # Включить локальный чат
+  radius: 50                           # Радиус действия локального чата
+  format: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
+  command: "/lo"                       # Команда для локального чата
+
+# ───── Настройки глобального чата ─────
+global-chat:
+  enabled: true                        # Включить глобальный чат
+  format: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
+  command: "/g"                        # Команда для глобального чата
+
+# ───── Настройки для приватных сообщений ─────
+private-messages:
+  format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Входящее сообщение
+  reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Исходящее сообщение
+
+# ───── Настройки базы данных для логирования чата ─────
+database:
+  type: "sqlite"                        # Выберите тип базы данных: "sqlite" или "mysql"
+  mysql:
+    host: "localhost"                    # Адрес MySQL сервера
+    port: 3306                           # Порт MySQL сервера
+    database: "minecraft_chat"           # Название базы данных
+    username: "root"                     # Имя пользователя для подключения
+    password: "password"                 # Пароль для доступа к базе данных

@@ -1,0 +1,29 @@
+# Ошибки
+errors:
+  only-players: "<red>Эта команда доступна только игрокам!</red>"
+
+# Сообщения для приватных сообщений (/msg и /reply)
+private-messages:
+  usage: "<red>Использование: /msg <игрок> <сообщение></red>"
+  player-not-found: "<red>Игрок {player} не найден или не в сети!</red>"
+  incoming: "<gradient:#f6a0d3:#b47ee5>✉ ЛС от {player}:</gradient> <white>{message}</white>"
+  outgoing: "<gradient:#b47ee5:#f6a0d3>✉ Вы → {player}:</gradient> <white>{message}</white>"
+
+# Сообщения для команды /reply
+reply:
+  usage: "<red>Использование: /reply <сообщение></red>"
+  no-target: "<red>Некому ответить! Сначала отправьте сообщение с помощью /msg.</red>"
+  target-offline: "<red>Игрок, которому вы хотите ответить, не в сети!</red>"
+
+# Сообщения для чата
+chat:
+  spam-warning: "<red>Не спамьте! Подождите немного перед отправкой следующего сообщения.</red>"
+  local-disabled: "<red>Локальный чат отключен на сервере!</red>"
+  chat-help:
+    - "<#d45079>=== ZoChat Справка ==="
+    - "<gray>/chat reload</gray> - Перезагрузить конфигурацию и сообщения"
+    - "<gray>/chat help</gray> - Показать эту справку"
+    - "<gray>/msg <игрок> <сообщение></gray> - Отправить личное сообщение"
+    - "<gray>/reply <сообщение></gray> - Ответить на последнее личное сообщение"
+    - "<gray>/g <сообщение></gray> - Отправить сообщение в глобальный чат"
+    - "<gray>/l <сообщение></gray> - Отправить сообщение в локальный чат"

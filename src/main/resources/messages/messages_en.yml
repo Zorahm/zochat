@@ -1,0 +1,29 @@
+# Errors
+errors:
+  only-players: "<red>This command is only available to players!</red>"
+
+# Private messages (/msg and /reply)
+private-messages:
+  usage: "<red>Usage: /msg <player> <message></red>"
+  player-not-found: "<red>Player {player} not found or offline!</red>"
+  incoming: "<gradient:#f6a0d3:#b47ee5>✉ PM from {player}:</gradient> <white>{message}</white>"
+  outgoing: "<gradient:#b47ee5:#f6a0d3>✉ You → {player}:</gradient> <white>{message}</white>"
+
+# /reply command messages
+reply:
+  usage: "<red>Usage: /reply <message></red>"
+  no-target: "<red>No one to reply to! First send a message using /msg.</red>"
+  target-offline: "<red>The player you want to reply to is offline!</red>"
+
+# Chat messages
+chat:
+  spam-warning: "<red>Don't spam! Please wait before sending another message.</red>"
+  local-disabled: "<red>Local chat is disabled on this server!</red>"
+  chat-help:
+    - "<#d45079>=== ZoChat Help ==="
+    - "<gray>/chat reload</gray> - Reload configuration and messages"
+    - "<gray>/chat help</gray> - Show this help menu"
+    - "<gray>/msg <player> <message></gray> - Send a private message"
+    - "<gray>/reply <message></gray> - Reply to the last private message"
+    - "<gray>/g <message></gray> - Send a message to global chat"
+    - "<gray>/l <message></gray> - Send a message to local chat"

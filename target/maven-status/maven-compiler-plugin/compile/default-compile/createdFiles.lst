@@ -1,0 +1,17 @@
+zorahm\zochat\commands\ChatCommand.class
+zorahm\zochat\commands\ChatLogCommand.class
+zorahm\zochat\database\DatabaseManager.class
+zorahm\zochat\MentionHandler.class
+zorahm\zochat\ChatPlugin.class
+zorahm\zochat\database\ChatLogger.class
+zorahm\zochat\MentionHandler$MentionResult.class
+zorahm\zochat\commands\GlobalChatCommand.class
+zorahm\zochat\BannedWordsManager.class
+zorahm\zochat\ChatConfig.class
+zorahm\zochat\ChatListener.class
+zorahm\zochat\commands\LocalChatCommand.class
+zorahm\zochat\ColorUtil.class
+zorahm\zochat\MessageManager.class
+zorahm\zochat\commands\MsgCommand.class
+zorahm\zochat\MessageUtil.class
+zorahm\zochat\commands\ReplyCommand.class
