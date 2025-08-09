@@ -2,16 +2,24 @@
 #            Конфигурация zoChat
 # ════════════════════════════════════════════
 
+config-version: 1.5.2 # Не меняйте!
+debug-mode: false
+
 # Язык сообщений
 message: ru
 
 # ───── Настройки антиспама ─────
 anti-spam:
-  enabled: false                        # Включить антиспам
+  enabled: true                        # Включить антиспам для ограничения частоты сообщений
   local-cooldown: 3                    # Кулдаун для локального чата (в секундах)
   global-cooldown: 5                   # Кулдаун для глобального чата (в секундах)
   private-cooldown: 2                  # Кулдаун для личных сообщений (в секундах)
-  bypass-permission: "chat.spam.bypass" # Право для обхода антиспама
+  bypass-permission: "zochat.spam.bypass" # Право для обхода антиспама
+
+# ───── Настройки фильтрации слов ─────
+banned-words:
+  enabled: true                        # Включить фильтрацию запрещённых слов
+  words: []                            # Список запрещённых слов (например, ["word1", "word2"])
 
 # ───── Настройки для упоминаний ─────
 mention:
@@ -37,6 +45,10 @@ private-messages:
   format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Входящее сообщение
   reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Исходящее сообщение
 
+# ───── Настройки оффлайн-сообщений ─────
+offline-messages:
+  enabled: true
+
 # ───── Настройки базы данных для логирования чата ─────
 database:
   type: "sqlite"                        # Выберите тип базы данных: "sqlite" или "mysql"
@@ -46,3 +58,53 @@ database:
     database: "minecraft_chat"           # Название базы данных
     username: "root"                     # Имя пользователя для подключения
     password: "password"                 # Пароль для доступа к базе данных
+
+# ───── Настройки сообщений о входе, выходе и достижениях ─────
+join-message:
+  enabled: false                        # Включить сообщения о входе
+  format: "<gradient:#55ff55:#aaffaa>{player} присоединился к игре!</gradient>"  # Формат сообщения
+  sound: "ENTITY_PLAYER_LEVELUP"       # Звук при входе (опционально)
+  stealth-permission: "zochat.stealth.join"  # Право для скрытия сообщения о входе
+
+quit-message:
+  enabled: false                        # Включить сообщения о выходе
+  format: "<gradient:#ff5555:#ffaaaa>{player} покинул игру!</gradient>"  # Формат сообщения
+  sound: "ENTITY_VILLAGER_NO"          # Звук при выходе (опционально)
+  stealth-permission: "zochat.stealth.quit"  # Право для скрытия сообщения о выходе
+
+advancement-message:
+  enabled: false                        # Включить сообщения о достижениях. ВНИМАНИЕ: ФУНКЦИЯ В БЕТЕ. ЛУЧШЕ ВЫКЛЮЧИТЬ, ЧТОБЫ БЫЛО ОПИСАНИЕ ДОСТИЖЕНИЙ
+  format: "<yellow>{player} получил достижение <green>{advancement}</green>!</yellow>"  # Формат сообщения
+  sound: "UI_TOAST_CHALLENGE_COMPLETE"  # Звук при достижении (опционально)
+
+# ───── Настройки умных плейсхолдеров ─────
+placeholders:
+  enabled: true                        # Включить умные плейсхолдеры
+  loc:
+    enabled: true                      # Включить плейсхолдер ^loc
+    permission: "chat.placeholder.loc"  # Право для использования
+    format: "<gray>{x}, {y}, {z}</gray>"  # Формат координат
+  world:
+    enabled: true
+    permission: "chat.placeholder.world"
+    format: "<aqua>{world}</aqua>"
+  time:
+    enabled: true
+    permission: "chat.placeholder.time"
+    format: "<gray>{time}</gray>"
+  health:
+    enabled: true
+    permission: "chat.placeholder.health"
+    format: "<red>{health} ♥</red>"
+  ping:
+    enabled: true
+    permission: "chat.placeholder.ping"
+    format: "<yellow>{ping}ms</yellow>"
+  biome:
+    enabled: true
+    permission: "chat.placeholder.biome"
+    format: "<green>{biome}</green>"
+  item:
+    enabled: true
+    permission: "chat.placeholder.item"
+    format: "<blue>{item}</blue>"

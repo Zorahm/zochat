@@ -11,6 +11,11 @@ C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\commands\MsgCo
 C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\commands\ReplyCommand.java
 C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\database\ChatLogger.java
 C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\database\DatabaseManager.java
+C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\LogMessageManager.java
 C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\MentionHandler.java
 C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\MessageManager.java
 C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\MessageUtil.java
+C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\PlaceholderManager.java
+C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\PlayerEventListener.java
+C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\PlayerJoinListener.java
+C:\Users\Zorahm\IdeaProjects\untitled\src\main\java\zorahm\zochat\WelcomeMessageManager.java

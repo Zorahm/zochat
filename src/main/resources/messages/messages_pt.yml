@@ -1,0 +1,38 @@
+# Aviso: esta tradução foi cuidadosamente adaptada para soar natural em português brasileiro.
+# Caso encontre erros, por favor, reporte ou corrija:
+# - Criando um issue no GitHub: https://github.com/zorahm/zochat/issues
+# - Ou editando diretamente o arquivo messages_pt.yml
+
+# Erros
+errors:
+  only-players: "<red>Este comando só pode ser usado por jogadores!</red>"
+  no-permission: "<red>Você não tem permissão para isso!</red>"
+
+# Mensagens privadas (/msg e /reply)
+private-messages:
+  usage: "<red>Uso: /msg <jogador> <mensagem></red>"
+  player-not-found: "<red>O jogador {player} não foi encontrado ou está offline!</red>"
+
+# Comando /reply
+reply:
+  usage: "<red>Uso: /reply <mensagem></red>"
+  no-target: "<red>Não há ninguém para responder! Envie uma mensagem com /msg primeiro.</red>"
+  target-offline: "<red>O jogador para quem você quer responder está offline!</red>"
+
+# Mensagens do chat
+chat:
+  spam-warning: "<red>Sem spam! Aguarde um pouco antes de enviar outra mensagem.</red>"
+  local-disabled: "<red>O chat local está desativado neste servidor!</red>"
+  message-player: "Enviar mensagem privada para {player}"
+  message-timestamp: "Enviado em: {time}"
+  reload-success: "<green>A configuração do plugin foi recarregada com sucesso.</green>"
+  unknown-subcommand: "<red>Subcomando desconhecido. Use /chat help.</red>"
+  banned-word: "<red>Sua mensagem contém palavras proibidas!</red>"
+  chat-help:
+    - "<#d45079>=== Ajuda do ZoChat ==="
+    - "<gray>/chat reload</gray> - recarregar configuração e mensagens"
+    - "<gray>/chat help</gray> - mostrar esta ajuda"
+    - "<gray>/msg <jogador> <mensagem></gray> - enviar mensagem privada"
+    - "<gray>/reply <mensagem></gray> - responder à última mensagem privada"
+    - "<gray>/g <mensagem></gray> - enviar mensagem no chat global"
+    - "<gray>/l <mensagem></gray> - enviar mensagem no chat local"

@@ -1,0 +1,38 @@
+# Hinweis: Diese Übersetzung wurde sorgfältig lokalisiert.
+# Wenn du einen Fehler findest, melde ihn bitte:
+# - GitHub-Issue: https://github.com/zorahm/zochat/issues
+# - Oder bearbeite die Datei messages_de.yml direkt
+
+# Fehler
+errors:
+  only-players: "<red>Dieser Befehl kann nur von Spielern verwendet werden!</red>"
+  no-permission: "<red>Du hast keine Berechtigung dafür!</red>"
+
+# Private Nachrichten (/msg und /reply)
+private-messages:
+  usage: "<red>Verwendung: /msg <Spieler> <Nachricht></red>"
+  player-not-found: "<red>Spieler {player} wurde nicht gefunden oder ist offline!</red>"
+
+# Befehl /reply
+reply:
+  usage: "<red>Verwendung: /reply <Nachricht></red>"
+  no-target: "<red>Niemand zum Antworten! Sende zuerst eine Nachricht mit /msg.</red>"
+  target-offline: "<red>Der Spieler, dem du antworten möchtest, ist offline!</red>"
+
+# Chat-Nachrichten
+chat:
+  spam-warning: "<red>Bitte kein Spam! Warte kurz, bevor du eine weitere Nachricht sendest.</red>"
+  local-disabled: "<red>Der lokale Chat ist auf diesem Server deaktiviert!</red>"
+  message-player: "Private Nachricht an {player} senden"
+  message-timestamp: "Gesendet am: {time}"
+  reload-success: "<green>Plugin-Konfiguration wurde erfolgreich neu geladen.</green>"
+  unknown-subcommand: "<red>Unbekannter Unterbefehl. Nutze /chat help.</red>"
+  banned-word: "<red>Deine Nachricht enthält verbotene Wörter!</red>"
+  chat-help:
+    - "<#d45079>=== ZoChat-Hilfe ==="
+    - "<gray>/chat reload</gray> - konfiguration und Nachrichten neu laden"
+    - "<gray>/chat help</gray> - diese Hilfe anzeigen"
+    - "<gray>/msg <Spieler> <Nachricht></gray> - private Nachricht senden"
+    - "<gray>/reply <Nachricht></gray> - auf die letzte PN antworten"
+    - "<gray>/g <Nachricht></gray> - Nachricht in den globalen Chat senden"
+    - "<gray>/l <Nachricht></gray> - Nachricht in den lokalen Chat senden"

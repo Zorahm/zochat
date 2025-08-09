@@ -1,5 +1,5 @@
 name: zoChat
-version: 1.3
+version: 1.5-pre1
 main: zorahm.zochat.ChatPlugin
 api-version: 1.21
 description: A custom chat plugin for Minecraft servers with local/global chat, private messages, and more.
@@ -38,8 +38,11 @@ permissions:
     description: Доступ к глобальному чату
     default: true
   zochat.local:
-    description: Доступ к локальному чату
+    description: Доступ к локальному чатуф
     default: true
   zochat.msg:
     description: Доступ к отправке приватных сообщений
     default: true
+  zochat.spam.bypass:
+    description: Обход ограничений антиспама
+    default: op

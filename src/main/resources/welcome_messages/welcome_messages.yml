@@ -1,0 +1,10 @@
+# welcome_messages.yml
+welcome-messages-version: 1.0.0
+enabled: false
+delay: 20
+messages:
+  - ""
+  - "<gradient:#55ff55:#aaffaa>Привет, {player}!</gradient>"
+  - ""
+  - "<yellow>Добро пожаловать на сервер!</yellow>"
+  - "<gray>Бла-бла-бла, наслаждайся игрой!</gray>"

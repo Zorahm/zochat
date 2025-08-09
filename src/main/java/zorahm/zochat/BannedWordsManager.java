@@ -1,3 +1,5 @@
+// TODO: Улучшить работу бан-сообщений (NT-303)
+
 package zorahm.zochat;
 
 import org.bukkit.configuration.file.FileConfiguration;

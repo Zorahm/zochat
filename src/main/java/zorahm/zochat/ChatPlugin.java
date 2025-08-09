@@ -2,11 +2,12 @@ package zorahm.zochat;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import zorahm.zochat.commands.*;
 import zorahm.zochat.database.ChatLogger;
@@ -15,6 +16,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class ChatPlugin extends JavaPlugin implements Listener {
@@ -22,7 +26,12 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
     private ChatConfig chatConfig;
     private ChatLogger chatLogger;
     private MessageManager messageManager;
+    private LogMessageManager logMessageManager;
+    private WelcomeMessageManager welcomeMessageManager;
+    private PlaceholderManager placeholderManager;
+    private MsgCommand msgCommand;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final HashMap<UUID, Long> lastMessageTime = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -30,7 +39,7 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         sendConsole(Component.text("").color(NamedTextColor.GRAY));
         sendConsole(Component.text(""));
         sendConsole(
-                Component.text(" ███████╗ ██████╗  ██████╗██╗  ██║ █████╗ ████████╗")
+                Component.text(" ███████╗ ██████╗  ██████╗██╗  ██║ █████╗ ████████║")
                         .color(TextColor.fromHexString("#d45079"))
                         .append(Component.text("    |    Версия: ").color(NamedTextColor.GRAY))
                         .append(Component.text(getDescription().getVersion()).color(NamedTextColor.WHITE))
@@ -39,13 +48,13 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
                 Component.text(" ╚══███╔╝██╔═══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══")
                         .color(TextColor.fromHexString("#d45079"))
                         .append(Component.text("     |    Автор: ").color(NamedTextColor.GRAY))
-                        .append(Component.text(getDescription().getAuthors().get(0)).color(NamedTextColor.WHITE))
+                        .append(Component.text(getDescription().getAuthors().isEmpty() ? "Unknown" : getDescription().getAuthors().get(0)).color(NamedTextColor.WHITE))
         );
         sendConsole(
                 Component.text("   ███╔╝ ██║   ██║██║     ███████║███████║   ██║")
                         .color(TextColor.fromHexString("#d45079"))
                         .append(Component.text("       |    Сайт: ").color(NamedTextColor.GRAY))
-                        .append(Component.text(getDescription().getWebsite()).color(NamedTextColor.WHITE))
+                        .append(Component.text(getDescription().getWebsite() != null ? getDescription().getWebsite() : "N/A").color(NamedTextColor.WHITE))
         );
         sendConsole(
                 Component.text("  ███╔╝  ██║   ██║██║     ██╔══██║██╔══██║   ██║")
@@ -62,11 +71,20 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         sendConsole(Component.text(""));
         sendConsole(Component.text("").color(NamedTextColor.GRAY));
 
+        // Проверка зависимости LuckPerms
+        if (Bukkit.getPluginManager().getPlugin("LuckPerms") == null) {
+            getLogger().warning("LuckPerms не найден! Префиксы и суффиксы не будут работать.");
+        }
+
         // Инициализация конфигурации
         saveDefaultConfig();
         chatConfig = new ChatConfig(this);
         chatLogger = new ChatLogger(this);
         messageManager = new MessageManager(this);
+        logMessageManager = new LogMessageManager(this);
+        welcomeMessageManager = new WelcomeMessageManager(this);
+        placeholderManager = new PlaceholderManager(this, chatConfig);
+        getLogger().log(Level.INFO, "PlaceholderManager initialized");
 
         // Регистрация команды "chat"
         PluginCommand chatCommand = getCommand("chat");
@@ -91,22 +109,21 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
             getLogger().warning("Команда 'local' не найдена в plugin.yml!");
         }
 
-        // Регистрируем обработчик чата
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this, chatConfig, chatLogger, messageManager), this);
-
-        // Регистрируем команды msg и reply
-        MsgCommand msgCommand = new MsgCommand(messageManager, chatConfig);
+        this.msgCommand = new MsgCommand(messageManager, chatConfig, this);
         PluginCommand msg = getCommand("msg");
         if (msg != null) {
-            msg.setExecutor(msgCommand);
+            msg.setExecutor((CommandExecutor) msgCommand);
         }
 
         PluginCommand replyCommand = getCommand("reply");
         if (replyCommand != null) {
-            replyCommand.setExecutor(new ReplyCommand(msgCommand, messageManager, chatConfig));
+            replyCommand.setExecutor(new ReplyCommand(msgCommand, messageManager, chatConfig, this));
         }
 
-        // Регистрируем обработчик событий входа игрока
+        // Регистрация слушателей
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this, chatConfig, chatLogger, messageManager, lastMessageTime, placeholderManager), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, chatConfig, messageManager, chatLogger), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerEventListener(this, chatConfig), this);
         Bukkit.getPluginManager().registerEvents(this, this);
     }
 
@@ -118,19 +135,60 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         return messageManager;
     }
 
+    public LogMessageManager getLogMessageManager() {
+        return logMessageManager;
+    }
+
+    public WelcomeMessageManager getWelcomeMessageManager() {
+        return welcomeMessageManager;
+    }
+
+    public PlaceholderManager getPlaceholderManager() {
+        return placeholderManager;
+    }
+
+    public ChatLogger getChatLogger() {
+        return chatLogger;
+    }
+
+    public HashMap<UUID, Long> getLastMessageTime() {
+        return lastMessageTime;
+    }
+
     @Override
     public void onDisable() {
         chatLogger.close();
+        lastMessageTime.clear();
         getLogger().info("ChatPlugin отключён.");
     }
 
     public void reloadChatConfig() {
         reloadConfig();
         chatConfig.reload();
+        messageManager.reloadMessages();
+        logMessageManager.reloadLogMessages();
+        welcomeMessageManager.reloadWelcomeMessages();
+        lastMessageTime.clear();
         getLogger().info(ChatColor.YELLOW + "Конфигурация плагина перезагружена.");
     }
 
     private void sendConsole(Component component) {
         Bukkit.getConsoleSender().sendMessage(component);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        msgCommand.clearLastMessaged(event.getPlayer().getUniqueId());
+        lastMessageTime.remove(event.getPlayer().getUniqueId());
+    }
+
+    public void logDebug(Level level, String key, Object... args) {
+        if (chatConfig.isDebugModeEnabled()) {
+            getLogger().log(level, logMessageManager.getLogMessage(key), args);
+        }
+    }
+
+    public void logStandard(Level level, String key, Object... args) {
+        getLogger().log(level, logMessageManager.getLogMessage(key), args);
     }
 }

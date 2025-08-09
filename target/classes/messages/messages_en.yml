@@ -1,28 +1,34 @@
+# Announcement: Original translation.
+
 # Errors
 errors:
-  only-players: "<red>This command is only available to players!</red>"
+  only-players: "<red>This command is for players only!</red>"
+  no-permission: "<red>You do not have permission to do that!</red>"
 
-# Private messages (/msg and /reply)
+# Messages for private messages (/msg and /reply)
 private-messages:
   usage: "<red>Usage: /msg <player> <message></red>"
   player-not-found: "<red>Player {player} not found or offline!</red>"
-  incoming: "<gradient:#f6a0d3:#b47ee5>✉ PM from {player}:</gradient> <white>{message}</white>"
-  outgoing: "<gradient:#b47ee5:#f6a0d3>✉ You → {player}:</gradient> <white>{message}</white>"
 
-# /reply command messages
+# Messages for /reply command
 reply:
   usage: "<red>Usage: /reply <message></red>"
-  no-target: "<red>No one to reply to! First send a message using /msg.</red>"
+  no-target: "<red>No one to reply to! Send a message with /msg first.</red>"
   target-offline: "<red>The player you want to reply to is offline!</red>"
 
-# Chat messages
+# Messages for chat
 chat:
-  spam-warning: "<red>Don't spam! Please wait before sending another message.</red>"
-  local-disabled: "<red>Local chat is disabled on this server!</red>"
+  spam-warning: "<red>Don't spam! Wait a bit before sending another message.</red>"
+  local-disabled: "<red>Local chat is disabled on the server!</red>"
+  message-player: "Message {player} privately"
+  message-timestamp: "Sent at: {time}"
+  reload-success: "<green>The plugin configuration has been successfully reloaded.</green>"
+  unknown-subcommand: "<red>Unknown subcommand. Use /chat help.</red>"
+  banned-word: "<red>Message contains banned words!</red>"
   chat-help:
     - "<#d45079>=== ZoChat Help ==="
     - "<gray>/chat reload</gray> - Reload configuration and messages"
-    - "<gray>/chat help</gray> - Show this help menu"
+    - "<gray>/chat help</gray> - Show this help"
     - "<gray>/msg <player> <message></gray> - Send a private message"
     - "<gray>/reply <message></gray> - Reply to the last private message"
     - "<gray>/g <message></gray> - Send a message to global chat"
