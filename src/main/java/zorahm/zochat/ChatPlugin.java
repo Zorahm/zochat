@@ -29,6 +29,7 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
     private LogMessageManager logMessageManager;
     private WelcomeMessageManager welcomeMessageManager;
     private PlaceholderManager placeholderManager;
+    private BannedWordsManager bannedWordsManager;
     private MsgCommand msgCommand;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final HashMap<UUID, Long> lastMessageTime = new HashMap<>();
@@ -84,7 +85,8 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         logMessageManager = new LogMessageManager(this);
         welcomeMessageManager = new WelcomeMessageManager(this);
         placeholderManager = new PlaceholderManager(this, chatConfig);
-        getLogger().log(Level.INFO, "PlaceholderManager initialized");
+        bannedWordsManager = new BannedWordsManager(chatConfig);
+        getLogger().log(Level.INFO, "PlaceholderManager and BannedWordsManager initialized");
 
         // Регистрация команды "chat"
         PluginCommand chatCommand = getCommand("chat");
@@ -94,10 +96,15 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
             getLogger().warning("Команда 'chat' не найдена в plugin.yml!");
         }
 
+        // Создаем MentionHandler и TabCompleter
+        MentionHandler mentionHandler = new MentionHandler(this, chatConfig);
+        zorahm.zochat.commands.MentionTabCompleter tabCompleter = new zorahm.zochat.commands.MentionTabCompleter(mentionHandler);
+
         // Регистрация команд /g и /l
         PluginCommand globalCommand = getCommand("global");
         if (globalCommand != null) {
             globalCommand.setExecutor(new GlobalChatCommand(this, chatConfig, messageManager));
+            globalCommand.setTabCompleter(tabCompleter);
         } else {
             getLogger().warning("Команда 'global' не найдена в plugin.yml!");
         }
@@ -105,6 +112,7 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         PluginCommand localCommand = getCommand("local");
         if (localCommand != null) {
             localCommand.setExecutor(new LocalChatCommand(this, chatConfig, messageManager));
+            localCommand.setTabCompleter(tabCompleter);
         } else {
             getLogger().warning("Команда 'local' не найдена в plugin.yml!");
         }
@@ -121,7 +129,7 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         }
 
         // Регистрация слушателей
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this, chatConfig, chatLogger, messageManager, lastMessageTime, placeholderManager), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this, chatConfig, chatLogger, messageManager, lastMessageTime, placeholderManager, bannedWordsManager), this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, chatConfig, messageManager, chatLogger), this);
         Bukkit.getPluginManager().registerEvents(new PlayerEventListener(this, chatConfig), this);
         Bukkit.getPluginManager().registerEvents(this, this);
@@ -145,6 +153,10 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
 
     public PlaceholderManager getPlaceholderManager() {
         return placeholderManager;
+    }
+
+    public BannedWordsManager getBannedWordsManager() {
+        return bannedWordsManager;
     }
 
     public ChatLogger getChatLogger() {

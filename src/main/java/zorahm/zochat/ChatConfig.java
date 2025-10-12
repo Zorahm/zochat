@@ -11,7 +11,7 @@ import java.util.logging.Level;
 public class ChatConfig {
     private final JavaPlugin plugin;
     private FileConfiguration config;
-    private final String CONFIG_VERSION = "1.5.2";
+    private final String CONFIG_VERSION = "1.6";
 
     public ChatConfig(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -146,6 +146,14 @@ public class ChatConfig {
         return getBannedWords().stream().anyMatch(banned -> word.equalsIgnoreCase(banned));
     }
 
+    public String getBannedWordsMode() {
+        return config.getString("banned-words.mode", "smart");
+    }
+
+    public String getBannedWordsAction() {
+        return config.getString("banned-words.action", "block");
+    }
+
     public boolean isOfflineMessagesEnabled() {
         return config.getBoolean("offline-messages.enabled", true);
     }
@@ -212,5 +220,39 @@ public class ChatConfig {
 
     public String getPlaceholderFormat(String placeholder) {
         return config.getString("placeholders." + placeholder + ".format", "");
+    }
+
+    public List<String> getPlaceholderAliases(String placeholder) {
+        return config.getStringList("placeholders." + placeholder + ".aliases");
+    }
+
+    // Mention настройки для @everyone
+    public String getMentionEveryonePermission() {
+        return config.getString("mention.everyone-permission", "zochat.mention.everyone");
+    }
+
+    public String getMentionEveryoneFormat() {
+        return config.getString("mention.everyone-format", "<red><bold>@everyone</bold></red>");
+    }
+
+    public String getMentionEveryoneMessage() {
+        return config.getString("mention.everyone-message", "<red>Вас упомянули через @everyone!</red>");
+    }
+
+    // Mention настройки для @here
+    public String getMentionHerePermission() {
+        return config.getString("mention.here-permission", "zochat.mention.here");
+    }
+
+    public String getMentionHereFormat() {
+        return config.getString("mention.here-format", "<gold><bold>@here</bold></gold>");
+    }
+
+    public String getMentionHereMessage() {
+        return config.getString("mention.here-message", "<gold>Вас упомянули через @here!</gold>");
+    }
+
+    public int getMentionHereRadius() {
+        return config.getInt("mention.here-radius", 100);
     }
 }

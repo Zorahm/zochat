@@ -1,8 +1,8 @@
 name: zoChat
-version: 1.5-pre1
+version: 1.6
 main: zorahm.zochat.ChatPlugin
 api-version: 1.21
-description: A custom chat plugin for Minecraft servers with local/global chat, private messages, and more.
+description: Enhanced chat plugin with local/global chat, mentions (@everyone/@here), smart placeholders, advanced word filter, and more.
 author: ZorahM
 website: https://github.com/Zorahm/zochat
 depend:
@@ -38,7 +38,7 @@ permissions:
     description: Доступ к глобальному чату
     default: true
   zochat.local:
-    description: Доступ к локальному чатуф
+    description: Доступ к локальному чату
     default: true
   zochat.msg:
     description: Доступ к отправке приватных сообщений
@@ -46,3 +46,30 @@ permissions:
   zochat.spam.bypass:
     description: Обход ограничений антиспама
     default: op
+  zochat.mention.everyone:
+    description: Доступ к упоминанию всех игроков через @everyone
+    default: op
+  zochat.mention.here:
+    description: Доступ к упоминанию игроков поблизости через @here
+    default: op
+  zochat.placeholder.loc:
+    description: Доступ к использованию плейсхолдера ^loc (координаты)
+    default: true
+  zochat.placeholder.world:
+    description: Доступ к использованию плейсхолдера ^world (мир)
+    default: true
+  zochat.placeholder.time:
+    description: Доступ к использованию плейсхолдера ^time (время)
+    default: true
+  zochat.placeholder.health:
+    description: Доступ к использованию плейсхолдера ^health (здоровье)
+    default: true
+  zochat.placeholder.ping:
+    description: Доступ к использованию плейсхолдера ^ping (пинг)
+    default: true
+  zochat.placeholder.biome:
+    description: Доступ к использованию плейсхолдера ^biome (биом)
+    default: true
+  zochat.placeholder.item:
+    description: Доступ к использованию плейсхолдера ^item (предмет в руке)
+    default: true

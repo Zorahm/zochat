@@ -10,10 +10,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import zorahm.zochat.ChatConfig;
-import zorahm.zochat.ChatPlugin;
-import zorahm.zochat.MentionHandler;
-import zorahm.zochat.MessageManager;
+import zorahm.zochat.*;
 
 public class GlobalChatCommand implements CommandExecutor {
     private final ChatPlugin plugin;
@@ -47,18 +44,30 @@ public class GlobalChatCommand implements CommandExecutor {
         // Формируем сообщение
         String message = String.join(" ", args);
 
-        // Проверка запрещённых слов
-        for (String word : message.split(" ")) {
-            if (chatConfig.isBannedWord(word)) {
-                player.sendMessage(miniMessage.deserialize("<red>Сообщение содержит запрещённые слова!</red>"));
-                return true;
-            }
+        // Проверка запрещённых слов через улучшенный фильтр
+        BannedWordsManager.FilterResult filterResult = plugin.getBannedWordsManager().checkMessage(message);
+        if (filterResult.isBlocked()) {
+            player.sendMessage(miniMessage.deserialize(messageManager.getMessage("chat.banned-word")));
+            return true;
+        }
+        // Если режим замены - используем отфильтрованное сообщение
+        if (filterResult.getProcessedMessage() != null) {
+            message = filterResult.getProcessedMessage();
         }
 
         // Обработка упоминаний
-        MentionHandler.MentionResult mentionResult = mentionHandler.processMentions(message);
+        MentionHandler.MentionResult mentionResult = mentionHandler.processMentions(message, player);
         String processedMessage = mentionResult.getProcessedMessage();
-        mentionHandler.notifyMentionedPlayers(mentionResult.getMentionedPlayers());
+
+        // Определяем тип упоминания
+        MentionHandler.MentionType mentionType = MentionHandler.MentionType.NORMAL;
+        if (mentionResult.hasEveryoneMention()) {
+            mentionType = MentionHandler.MentionType.EVERYONE;
+        } else if (mentionResult.hasHereMention()) {
+            mentionType = MentionHandler.MentionType.HERE;
+        }
+
+        mentionHandler.notifyMentionedPlayers(mentionResult.getMentionedPlayers(), mentionType);
 
         // Получаем префикс и суффикс из LuckPerms
         LuckPerms luckPerms = LuckPermsProvider.get();

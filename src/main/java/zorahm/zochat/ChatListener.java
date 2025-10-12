@@ -28,18 +28,20 @@ public class ChatListener implements Listener {
     private final MessageManager messageManager;
     private final MentionHandler mentionHandler;
     private final PlaceholderManager placeholderManager;
+    private final BannedWordsManager bannedWordsManager;
     private final HashMap<UUID, Long> lastMessageTime;
     private final LuckPerms luckPerms;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
-    public ChatListener(ChatPlugin plugin, ChatConfig chatConfig, ChatLogger chatLogger, MessageManager messageManager, HashMap<UUID, Long> lastMessageTime, PlaceholderManager placeholderManager) {
+    public ChatListener(ChatPlugin plugin, ChatConfig chatConfig, ChatLogger chatLogger, MessageManager messageManager, HashMap<UUID, Long> lastMessageTime, PlaceholderManager placeholderManager, BannedWordsManager bannedWordsManager) {
         this.plugin = plugin;
         this.chatConfig = chatConfig;
         this.chatLogger = chatLogger;
         this.messageManager = messageManager;
         this.mentionHandler = new MentionHandler(plugin, chatConfig);
         this.placeholderManager = placeholderManager;
+        this.bannedWordsManager = bannedWordsManager;
         this.lastMessageTime = lastMessageTime;
         this.luckPerms = LuckPermsProvider.get();
     }
@@ -74,12 +76,19 @@ public class ChatListener implements Listener {
             plugin.getLogger().log(Level.INFO, "Updated lastMessageTime for {0}: {1}", new Object[]{player.getName(), now});
         }
 
-        for (String word : message.split(" ")) {
-            if (chatConfig.isBannedWord(word)) {
-                player.sendMessage(miniMessage.deserialize(messageManager.getMessage("chat.banned-word")));
-                event.setCancelled(true);
-                return;
-            }
+        // Проверка запрещенных слов через улучшенный фильтр
+        BannedWordsManager.FilterResult filterResult = bannedWordsManager.checkMessage(message);
+        if (filterResult.isBlocked()) {
+            player.sendMessage(miniMessage.deserialize(messageManager.getMessage("chat.banned-word")));
+            event.setCancelled(true);
+            plugin.getLogger().log(Level.INFO, "{0} attempted to use banned word: {1}",
+                    new Object[]{player.getName(), filterResult.getMatchedWord()});
+            return;
+        }
+        // Если режим замены - используем отфильтрованное сообщение
+        if (filterResult.getProcessedMessage() != null && !filterResult.getProcessedMessage().equals(message)) {
+            message = filterResult.getProcessedMessage();
+            event.setMessage(message);
         }
 
         // Обработка плейсхолдеров
@@ -88,9 +97,18 @@ public class ChatListener implements Listener {
         plugin.getLogger().log(Level.INFO, "Processed message component for {0}: {1}", new Object[]{player.getName(), miniMessage.serialize(processedMessageComponent)});
 
         // Обработка упоминаний
-        MentionHandler.MentionResult mentionResult = mentionHandler.processMentions(miniMessage.serialize(processedMessageComponent));
+        MentionHandler.MentionResult mentionResult = mentionHandler.processMentions(miniMessage.serialize(processedMessageComponent), player);
         processedMessageComponent = miniMessage.deserialize(mentionResult.getProcessedMessage());
-        mentionHandler.notifyMentionedPlayers(mentionResult.getMentionedPlayers());
+
+        // Определяем тип упоминания
+        MentionHandler.MentionType mentionType = MentionHandler.MentionType.NORMAL;
+        if (mentionResult.hasEveryoneMention()) {
+            mentionType = MentionHandler.MentionType.EVERYONE;
+        } else if (mentionResult.hasHereMention()) {
+            mentionType = MentionHandler.MentionType.HERE;
+        }
+
+        mentionHandler.notifyMentionedPlayers(mentionResult.getMentionedPlayers(), mentionType);
 
         User user = luckPerms.getUserManager().getUser(playerId);
         String prefix = (user != null && user.getCachedData().getMetaData().getPrefix() != null)

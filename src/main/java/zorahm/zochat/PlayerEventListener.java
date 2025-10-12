@@ -83,15 +83,25 @@ public class PlayerEventListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
-        String advancementName = event.getAdvancement().getDisplay() != null
-                ? plainTextSerializer.serialize(event.getAdvancement().getDisplay().title())
-                : event.getAdvancement().getKey().getKey();
+
+        // Получаем название и описание достижения
+        String advancementName;
+        String advancementDescription = "";
+
+        if (event.getAdvancement().getDisplay() != null) {
+            advancementName = plainTextSerializer.serialize(event.getAdvancement().getDisplay().title());
+            advancementDescription = plainTextSerializer.serialize(event.getAdvancement().getDisplay().description());
+        } else {
+            advancementName = event.getAdvancement().getKey().getKey();
+        }
+
         Component message = miniMessage.deserialize(
                 chatConfig.getAdvancementMessageFormat()
                         .replace("{player}", player.getName())
                         .replace("{advancement}", advancementName)
+                        .replace("{description}", advancementDescription)
         );
-        Bukkit.getServer().sendMessage(message);
+        Bukkit.getServer().broadcast(message);
         String sound = chatConfig.getAdvancementMessageSound();
         if (sound != null && !sound.isEmpty()) {
             try {

@@ -1,5 +1,6 @@
 zorahm\zochat\commands\ChatCommand.class
 zorahm\zochat\commands\ChatLogCommand.class
+zorahm\zochat\MentionHandler$MentionType.class
 zorahm\zochat\ChatPlugin.class
 zorahm\zochat\database\ChatLogger$OfflineMessage.class
 zorahm\zochat\MentionHandler$MentionResult.class
@@ -12,9 +13,13 @@ zorahm\zochat\PlayerEventListener.class
 zorahm\zochat\commands\ReplyCommand.class
 zorahm\zochat\database\DatabaseManager.class
 zorahm\zochat\MentionHandler.class
+zorahm\zochat\BannedWordsManager$FilterMode.class
+zorahm\zochat\BannedWordsManager$FilterResult.class
+zorahm\zochat\commands\MentionTabCompleter.class
 zorahm\zochat\database\ChatLogger.class
 zorahm\zochat\commands\GlobalChatCommand.class
 zorahm\zochat\WelcomeMessageManager.class
+zorahm\zochat\BannedWordsManager$FilterAction.class
 zorahm\zochat\PlaceholderManager.class
 zorahm\zochat\BannedWordsManager.class
 zorahm\zochat\ChatListener.class

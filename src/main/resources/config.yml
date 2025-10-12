@@ -2,7 +2,7 @@
 #            Конфигурация zoChat
 # ════════════════════════════════════════════
 
-config-version: 1.5.2 # Не меняйте!
+config-version: 1.6 # Не меняйте!
 debug-mode: false
 
 # Язык сообщений
@@ -19,13 +19,28 @@ anti-spam:
 # ───── Настройки фильтрации слов ─────
 banned-words:
   enabled: true                        # Включить фильтрацию запрещённых слов
-  words: []                            # Список запрещённых слов (например, ["word1", "word2"])
+  mode: "smart"                        # Режим фильтрации: "exact" (точное совпадение), "contains" (содержит), "smart" (умная проверка с нормализацией)
+  action: "block"                      # Действие: "block" (заблокировать сообщение), "replace" (заменить на ***)
+  words: []                            # Список запрещённых слов (например, ["плохое_слово", "regex:\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b"])
+                                       # Для регулярных выражений используйте префикс "regex:" (например, "regex:\\b(bad|word)\\b")
 
 # ───── Настройки для упоминаний ─────
 mention:
+  # Обычное упоминание @PlayerName
   format: "<yellow><bold>@{player}</bold></yellow>"  # Формат подсветки упоминания
   sound: "ENTITY_EXPERIENCE_ORB_PICKUP"             # Звук при упоминании
   message: "<yellow>Тебя упомянули в чате!</yellow>" # Уведомление через Action Bar
+
+  # Упоминание @everyone - упоминает всех игроков на сервере
+  everyone-permission: "zochat.mention.everyone"    # Право для использования @everyone
+  everyone-format: "<red><bold>@everyone</bold></red>"  # Формат отображения @everyone
+  everyone-message: "<red>Вас упомянули через @everyone!</red>"  # Уведомление при @everyone
+
+  # Упоминание @here - упоминает игроков поблизости
+  here-permission: "zochat.mention.here"            # Право для использования @here
+  here-format: "<gold><bold>@here</bold></gold>"    # Формат отображения @here
+  here-message: "<gold>Вас упомянули через @here!</gold>"  # Уведомление при @here
+  here-radius: 100                                  # Радиус действия @here (в блоках)
 
 # ───── Настройки локального чата ─────
 local-chat:
@@ -73,38 +88,47 @@ quit-message:
   stealth-permission: "zochat.stealth.quit"  # Право для скрытия сообщения о выходе
 
 advancement-message:
-  enabled: false                        # Включить сообщения о достижениях. ВНИМАНИЕ: ФУНКЦИЯ В БЕТЕ. ЛУЧШЕ ВЫКЛЮЧИТЬ, ЧТОБЫ БЫЛО ОПИСАНИЕ ДОСТИЖЕНИЙ
-  format: "<yellow>{player} получил достижение <green>{advancement}</green>!</yellow>"  # Формат сообщения
+  enabled: false                        # Включить кастомные сообщения о достижениях
+  format: "<yellow>{player} получил достижение <green>{advancement}</green>!</yellow>\n<gray>{description}</gray>"  # Формат сообщения. Доступные плейсхолдеры: {player}, {advancement}, {description}
   sound: "UI_TOAST_CHALLENGE_COMPLETE"  # Звук при достижении (опционально)
 
 # ───── Настройки умных плейсхолдеров ─────
+# Игроки могут использовать плейсхолдеры в чате (например: "Я нахожусь ^loc")
+# Каждый плейсхолдер может иметь алиасы для удобства
 placeholders:
   enabled: true                        # Включить умные плейсхолдеры
   loc:
     enabled: true                      # Включить плейсхолдер ^loc
-    permission: "chat.placeholder.loc"  # Право для использования
-    format: "<gray>{x}, {y}, {z}</gray>"  # Формат координат
+    aliases: ["coords", "pos", "где"]   # Алиасы: ^coords, ^pos, ^где
+    permission: "zochat.placeholder.loc"  # Право для использования
+    format: "<gray>{x}, {y}, {z}</gray>"  # Формат координат. Доступно: {x}, {y}, {z}, {world}
   world:
     enabled: true
-    permission: "chat.placeholder.world"
-    format: "<aqua>{world}</aqua>"
+    aliases: ["мир", "w"]
+    permission: "zochat.placeholder.world"
+    format: "<aqua>{world}</aqua>"     # Формат мира. Доступно: {world}
   time:
     enabled: true
-    permission: "chat.placeholder.time"
-    format: "<gray>{time}</gray>"
+    aliases: ["время", "clock"]
+    permission: "zochat.placeholder.time"
+    format: "<gray>{time}</gray>"      # Формат времени. Доступно: {time} (время в мире), {realtime} (реальное время)
   health:
     enabled: true
-    permission: "chat.placeholder.health"
-    format: "<red>{health} ♥</red>"
+    aliases: ["hp", "здоровье"]
+    permission: "zochat.placeholder.health"
+    format: "<red>{health} ♥</red>"    # Формат здоровья. Доступно: {health}, {maxhealth}
   ping:
     enabled: true
-    permission: "chat.placeholder.ping"
-    format: "<yellow>{ping}ms</yellow>"
+    aliases: ["пинг", "latency"]
+    permission: "zochat.placeholder.ping"
+    format: "<yellow>{ping}ms</yellow>"  # Формат пинга. Доступно: {ping}
   biome:
     enabled: true
-    permission: "chat.placeholder.biome"
-    format: "<green>{biome}</green>"
+    aliases: ["биом", "b"]
+    permission: "zochat.placeholder.biome"
+    format: "<green>{biome}</green>"   # Формат биома. Доступно: {biome}
   item:
     enabled: true
-    permission: "chat.placeholder.item"
-    format: "<blue>{item}</blue>"
+    aliases: ["предмет", "hand"]
+    permission: "zochat.placeholder.item"
+    format: "<blue>[{item}]</blue>"    # Формат предмета в руке. Доступно: {item}, {amount}
