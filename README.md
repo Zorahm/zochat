@@ -1,6 +1,6 @@
 # **zoChat**
 
-![GitHub](https://img.shields.io/github/license/Zorahm/zoChat) ![Version](https://img.shields.io/badge/version-1.5--pre1-red) ![GitHub Release](https://img.shields.io/github/v/release/Zorahm/zoChat)
+![GitHub](https://img.shields.io/github/license/Zorahm/zoChat) ![Version](https://img.shields.io/badge/version-1.6-blue) ![GitHub Release](https://img.shields.io/github/v/release/Zorahm/zoChat)
 
 **zoChat** — мощный и гибкий плагин для улучшения чата на Minecraft-серверах. Поддерживает локальный и глобальный чат, упоминания игроков, личные сообщения, кастомное форматирование и интеграцию с LuckPerms для отображения префиксов и суффиксов. Плагин полностью переводимый, с поддержкой настраиваемых сообщений через файлы локализации.
 
