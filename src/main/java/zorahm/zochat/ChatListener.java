@@ -34,7 +34,15 @@ public class ChatListener implements Listener {
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
-    public ChatListener(ChatPlugin plugin, ChatConfig chatConfig, ChatLogger chatLogger, MessageManager messageManager, HashMap<UUID, Long> lastMessageTime, PlaceholderManager placeholderManager, BannedWordsManager bannedWordsManager) {
+    // Новые менеджеры
+    private final ModerationManager moderationManager;
+    private final IgnoreManager ignoreManager;
+    private final RateLimitManager rateLimitManager;
+
+    public ChatListener(ChatPlugin plugin, ChatConfig chatConfig, ChatLogger chatLogger, MessageManager messageManager,
+                        HashMap<UUID, Long> lastMessageTime, PlaceholderManager placeholderManager,
+                        BannedWordsManager bannedWordsManager, ModerationManager moderationManager,
+                        IgnoreManager ignoreManager, RateLimitManager rateLimitManager) {
         this.plugin = plugin;
         this.chatConfig = chatConfig;
         this.chatLogger = chatLogger;
@@ -44,6 +52,9 @@ public class ChatListener implements Listener {
         this.bannedWordsManager = bannedWordsManager;
         this.lastMessageTime = lastMessageTime;
         this.luckPerms = LuckPermsProvider.get();
+        this.moderationManager = moderationManager;
+        this.ignoreManager = ignoreManager;
+        this.rateLimitManager = rateLimitManager;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -51,6 +62,43 @@ public class ChatListener implements Listener {
         Player player = event.getPlayer();
         String message = event.getMessage();
         UUID playerId = player.getUniqueId();
+
+        // ═══════════════════════════════════════════════════════════════
+        // ПРОВЕРКА МОДЕРАЦИИ
+        // ═══════════════════════════════════════════════════════════════
+
+        // Проверка чат-бана
+        if (moderationManager.isChatBanned(playerId) && !player.hasPermission("zochat.moderation.bypass")) {
+            player.sendMessage(miniMessage.deserialize(
+                    "<red>Вы забанены в чате и не можете отправлять сообщения!</red>"));
+            event.setCancelled(true);
+            return;
+        }
+
+        // Проверка мьюта
+        if (moderationManager.isMuted(playerId) && !player.hasPermission("zochat.moderation.bypass")) {
+            ModerationManager.MuteInfo muteInfo = moderationManager.getMuteInfo(playerId);
+            String muteMessage = "<red>Вы замьючены и не можете отправлять сообщения!</red>\n" +
+                    "<gray>Причина: " + muteInfo.getReason() + "</gray>";
+            if (!muteInfo.isPermanent()) {
+                muteMessage += "\n<gray>Мьют истекает: " + muteInfo.getEndTime() + "</gray>";
+            }
+            player.sendMessage(miniMessage.deserialize(muteMessage));
+            event.setCancelled(true);
+            return;
+        }
+
+        // Проверка rate limiting (если включено)
+        if (plugin.getConfig().getBoolean("rate-limit.enabled", true) &&
+                !player.hasPermission("zochat.spam.bypass")) {
+            if (rateLimitManager.checkRateLimit(player)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+
+        // Обновляем активность игрока
+        chatLogger.updatePlayerActivityAsync(playerId, player.getName());
 
         boolean forceGlobal = false;
         if (message.startsWith("!")) {
@@ -89,6 +137,11 @@ public class ChatListener implements Listener {
         if (filterResult.getProcessedMessage() != null && !filterResult.getProcessedMessage().equals(message)) {
             message = filterResult.getProcessedMessage();
             event.setMessage(message);
+        }
+
+        // Применяем rich форматирование (если включено)
+        if (plugin.getConfig().getBoolean("rich-formatting.enabled", true)) {
+            message = RichTextFormatter.applyFormatting(message);
         }
 
         // Обработка плейсхолдеров
@@ -149,13 +202,25 @@ public class ChatListener implements Listener {
         if (sendToLocalChat) {
             int radius = chatConfig.getLocalChatRadius();
             for (Player recipient : Bukkit.getOnlinePlayers()) {
+                // Проверка игнорирования
+                if (ignoreManager.isIgnoring(recipient.getUniqueId(), playerId)) {
+                    continue; // Пропускаем игнорирующих
+                }
+
                 if (recipient.getWorld().equals(player.getWorld()) &&
                         recipient.getLocation().distanceSquared(player.getLocation()) <= radius * radius) {
                     recipient.sendMessage(finalMessage);
                 }
             }
         } else {
-            Bukkit.getServer().broadcast(finalMessage);
+            // Глобальный чат - отправляем всем, кроме игнорирующих
+            for (Player recipient : Bukkit.getOnlinePlayers()) {
+                // Проверка игнорирования
+                if (ignoreManager.isIgnoring(recipient.getUniqueId(), playerId)) {
+                    continue; // Пропускаем игнорирующих
+                }
+                recipient.sendMessage(finalMessage);
+            }
         }
 
         event.setCancelled(true);

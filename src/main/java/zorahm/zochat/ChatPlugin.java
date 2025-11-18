@@ -34,6 +34,12 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final HashMap<UUID, Long> lastMessageTime = new HashMap<>();
 
+    // Новые менеджеры для модерации и функционала
+    private ModerationManager moderationManager;
+    private IgnoreManager ignoreManager;
+    private RateLimitManager rateLimitManager;
+    private MessageHistoryManager messageHistoryManager;
+
     @Override
     public void onEnable() {
         // Adventure API для логов
@@ -88,6 +94,14 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
         bannedWordsManager = new BannedWordsManager(chatConfig);
         getLogger().log(Level.INFO, "PlaceholderManager and BannedWordsManager initialized");
 
+        // Инициализация новых менеджеров
+        moderationManager = new ModerationManager(this);
+        ignoreManager = new IgnoreManager(this);
+        messageHistoryManager = new MessageHistoryManager(this);
+        rateLimitManager = new RateLimitManager(this, moderationManager);
+        rateLimitManager.startCleanupTask();
+        getLogger().log(Level.INFO, "ModerationManager, IgnoreManager, MessageHistoryManager и RateLimitManager initialized");
+
         // Регистрация команды "chat"
         PluginCommand chatCommand = getCommand("chat");
         if (chatCommand != null) {
@@ -128,8 +142,25 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
             replyCommand.setExecutor(new ReplyCommand(msgCommand, messageManager, chatConfig, this));
         }
 
+        // Регистрация команд модерации
+        registerCommand("mute", new zorahm.zochat.commands.MuteCommand(this, moderationManager));
+        registerCommand("unmute", new zorahm.zochat.commands.UnmuteCommand(this, moderationManager));
+        registerCommand("warn", new zorahm.zochat.commands.WarnCommand(this, moderationManager));
+        registerCommand("chatban", new zorahm.zochat.commands.ChatBanCommand(this, moderationManager));
+        registerCommand("clearchat", new zorahm.zochat.commands.ClearChatCommand(this));
+
+        // Регистрация команд для истории и утилит
+        registerCommand("history", new zorahm.zochat.commands.HistoryCommand(this, messageHistoryManager));
+        registerCommand("seen", new zorahm.zochat.commands.SeenCommand(this));
+        registerCommand("broadcast", new zorahm.zochat.commands.BroadcastCommand(this));
+
+        // Регистрация команд игнорирования
+        registerCommand("ignore", new zorahm.zochat.commands.IgnoreCommand(this, ignoreManager));
+        registerCommand("unignore", new zorahm.zochat.commands.UnignoreCommand(this, ignoreManager));
+        registerCommand("ignorelist", new zorahm.zochat.commands.IgnoreListCommand(this, ignoreManager));
+
         // Регистрация слушателей
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this, chatConfig, chatLogger, messageManager, lastMessageTime, placeholderManager, bannedWordsManager), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this, chatConfig, chatLogger, messageManager, lastMessageTime, placeholderManager, bannedWordsManager, moderationManager, ignoreManager, rateLimitManager), this);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this, chatConfig, messageManager, chatLogger), this);
         Bukkit.getPluginManager().registerEvents(new PlayerEventListener(this, chatConfig), this);
         Bukkit.getPluginManager().registerEvents(this, this);
@@ -165,6 +196,37 @@ public final class ChatPlugin extends JavaPlugin implements Listener {
 
     public HashMap<UUID, Long> getLastMessageTime() {
         return lastMessageTime;
+    }
+
+    public ModerationManager getModerationManager() {
+        return moderationManager;
+    }
+
+    public IgnoreManager getIgnoreManager() {
+        return ignoreManager;
+    }
+
+    public RateLimitManager getRateLimitManager() {
+        return rateLimitManager;
+    }
+
+    public MessageHistoryManager getMessageHistoryManager() {
+        return messageHistoryManager;
+    }
+
+    /**
+     * Вспомогательный метод для регистрации команд
+     */
+    private void registerCommand(String name, CommandExecutor executor) {
+        PluginCommand command = getCommand(name);
+        if (command != null) {
+            command.setExecutor(executor);
+            if (executor instanceof TabCompleter) {
+                command.setTabCompleter((TabCompleter) executor);
+            }
+        } else {
+            getLogger().warning("Команда '" + name + "' не найдена в plugin.yml!");
+        }
     }
 
     @Override

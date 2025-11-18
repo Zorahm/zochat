@@ -30,6 +30,40 @@ commands:
     description: Ответ на последнее приватное сообщение
     usage: /<command> <сообщение>
     aliases: [r]
+  mute:
+    description: Замьютить игрока
+    usage: /<command> <игрок> [длительность(сек)] [причина]
+  unmute:
+    description: Размьютить игрока
+    usage: /<command> <игрок>
+  warn:
+    description: Выдать варнинг игроку
+    usage: /<command> <игрок> [причина]
+  chatban:
+    description: Забанить игрока в чате навсегда
+    usage: /<command> <игрок> [причина]
+  clearchat:
+    description: Очистить чат для всех игроков
+    usage: /<command>
+  history:
+    description: Просмотреть историю личных сообщений с игроком
+    usage: /<command> <игрок>
+  seen:
+    description: Показать когда игрок был в сети
+    usage: /<command> <игрок>
+  broadcast:
+    description: Отправить объявление всем игрокам
+    usage: /<command> <сообщение>
+    aliases: [bc]
+  ignore:
+    description: Игнорировать сообщения от игрока
+    usage: /<command> <игрок>
+  unignore:
+    description: Перестать игнорировать игрока
+    usage: /<command> <игрок>
+  ignorelist:
+    description: Список игнорируемых игроков
+    usage: /<command>
 permissions:
   zochat.admin:
     description: Доступ к админским командам плагина (например, /chat reload)
@@ -73,3 +107,27 @@ permissions:
   zochat.placeholder.item:
     description: Доступ к использованию плейсхолдера ^item (предмет в руке)
     default: true
+  zochat.mute:
+    description: Право на использование команды /mute
+    default: op
+  zochat.unmute:
+    description: Право на использование команды /unmute
+    default: op
+  zochat.warn:
+    description: Право на использование команды /warn
+    default: op
+  zochat.chatban:
+    description: Право на использование команды /chatban
+    default: op
+  zochat.clearchat:
+    description: Право на использование команды /clearchat
+    default: op
+  zochat.clearchat.bypass:
+    description: Игроки с этим правом увидят только уведомление при очистке чата
+    default: op
+  zochat.broadcast:
+    description: Право на использование команды /broadcast
+    default: op
+  zochat.moderation.bypass:
+    description: Обход всех ограничений модерации (нельзя мьютнуть/забанить)
+    default: op

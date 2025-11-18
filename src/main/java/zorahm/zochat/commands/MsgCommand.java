@@ -59,6 +59,20 @@ public class MsgCommand implements CommandExecutor {
         Player target = Bukkit.getPlayerExact(targetName);
         UUID targetUUID = null;
 
+        // Проверка игнорирования
+        if (target != null) {
+            if (plugin.getIgnoreManager().isIgnoring(target.getUniqueId(), player.getUniqueId())) {
+                player.sendMessage(miniMessage.deserialize(
+                        "<red>Этот игрок игнорирует вас. Вы не можете отправить ему сообщение!</red>"));
+                return true;
+            }
+            if (plugin.getIgnoreManager().isIgnoring(player.getUniqueId(), target.getUniqueId())) {
+                player.sendMessage(miniMessage.deserialize(
+                        "<yellow>Вы игнорируете этого игрока! Используйте /unignore " + target.getName() + " чтобы снять игнорирование.</yellow>"));
+                return true;
+            }
+        }
+
         if (target == null) {
             // Проверяем, существует ли игрок (оффлайн)
             targetUUID = Bukkit.getOfflinePlayer(targetName).getUniqueId();
@@ -132,6 +146,10 @@ public class MsgCommand implements CommandExecutor {
         target.sendMessage(incomingMessage);
         player.sendMessage(outgoingMessage);
         plugin.logStandard(Level.INFO, "sent-offline-message", player.getName(), target.getName(), message);
+
+        // Сохраняем в историю сообщений с показом статуса доставки
+        plugin.getMessageHistoryManager().saveMessageWithDeliveryStatus(
+                player.getUniqueId(), target.getUniqueId(), message, target);
 
         lastMessages.put(target.getUniqueId(), player.getUniqueId());
         lastMessages.put(player.getUniqueId(), target.getUniqueId());

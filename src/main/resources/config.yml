@@ -92,6 +92,19 @@ advancement-message:
   format: "<yellow>{player} получил достижение <green>{advancement}</green>!</yellow>\n<gray>{description}</gray>"  # Формат сообщения. Доступные плейсхолдеры: {player}, {advancement}, {description}
   sound: "UI_TOAST_CHALLENGE_COMPLETE"  # Звук при достижении (опционально)
 
+# ───── Настройки Rate Limiting (защита от спама с наказаниями) ─────
+rate-limit:
+  enabled: true                        # Включить защиту от спама с автоматическими наказаниями
+  max-messages: 3                      # Максимум сообщений
+  time-window-seconds: 5               # За какое время (секунды)
+  temp-mute-seconds: 30                # Длительность временного мьюта за первое нарушение
+  violations-for-ban: 3                # Количество нарушений для бана
+  ban-duration-hours: 1                # Длительность бана за многократный спам (часы)
+
+# ───── Настройки Rich форматирования ─────
+rich-formatting:
+  enabled: true                        # Включить поддержку **bold**, *italic*, ~~strikethrough~~
+
 # ───── Настройки умных плейсхолдеров ─────
 # Игроки могут использовать плейсхолдеры в чате (например: "Я нахожусь ^loc")
 # Каждый плейсхолдер может иметь алиасы для удобства
