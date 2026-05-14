@@ -65,7 +65,7 @@ public class ChatListener implements Listener {
             long now = System.currentTimeMillis();
             long lastTime = lastMessageTime.getOrDefault(playerId, 0L);
             int cooldown = forceGlobal || !chatConfig.isLocalChatEnabled() ? chatConfig.getGlobalChatCooldown() : chatConfig.getLocalChatCooldown();
-            plugin.getLogger().log(Level.INFO, "Checking cooldown for {0}: now={1}, lastTime={2}, cooldown={3}s",
+            plugin.logDebug(Level.INFO, "chat-cooldown-check",
                     new Object[]{player.getName(), now, lastTime, cooldown});
             if (now - lastTime < cooldown * 1000L) {
                 player.sendMessage(miniMessage.deserialize(messageManager.getMessage("chat.spam-warning")));
@@ -73,7 +73,7 @@ public class ChatListener implements Listener {
                 return;
             }
             lastMessageTime.put(playerId, now);
-            plugin.getLogger().log(Level.INFO, "Updated lastMessageTime for {0}: {1}", new Object[]{player.getName(), now});
+            plugin.logDebug(Level.INFO, "chat-cooldown-updated", new Object[]{player.getName(), now});
         }
 
         // Проверка запрещенных слов через улучшенный фильтр
@@ -81,7 +81,7 @@ public class ChatListener implements Listener {
         if (filterResult.isBlocked()) {
             player.sendMessage(miniMessage.deserialize(messageManager.getMessage("chat.banned-word")));
             event.setCancelled(true);
-            plugin.getLogger().log(Level.INFO, "{0} attempted to use banned word: {1}",
+            plugin.logDebug(Level.INFO, "chat-banned-word",
                     new Object[]{player.getName(), filterResult.getMatchedWord()});
             return;
         }
@@ -92,9 +92,9 @@ public class ChatListener implements Listener {
         }
 
         // Обработка плейсхолдеров
-        plugin.getLogger().log(Level.INFO, "Processing placeholders for {0}: {1}", new Object[]{player.getName(), message});
+        plugin.logDebug(Level.INFO, "chat-processing-placeholders", new Object[]{player.getName(), message});
         Component processedMessageComponent = placeholderManager.processPlaceholders(player, message);
-        plugin.getLogger().log(Level.INFO, "Processed message component for {0}: {1}", new Object[]{player.getName(), miniMessage.serialize(processedMessageComponent)});
+        plugin.logDebug(Level.INFO, "chat-processed-component", new Object[]{player.getName(), miniMessage.serialize(processedMessageComponent)});
 
         // Обработка упоминаний
         MentionHandler.MentionResult mentionResult = mentionHandler.processMentions(miniMessage.serialize(processedMessageComponent), player);
@@ -142,8 +142,8 @@ public class ChatListener implements Listener {
                 .replaceText(builder -> builder.matchLiteral("{player}").replacement(playerNameComponent))
                 .replaceText(builder -> builder.matchLiteral("{message}").replacement(messageComponent));
 
-        plugin.getLogger().log(Level.INFO, "Chat message format: {0}", format);
-        plugin.getLogger().log(Level.INFO, "Prefix: {0}, Suffix: {1}, Player: {2}, Message: {3}",
+        plugin.logDebug(Level.INFO, "chat-format-template", new Object[]{format});
+        plugin.logDebug(Level.INFO, "chat-format-details",
                 new Object[]{prefix, suffix, player.getName(), miniMessage.serialize(processedMessageComponent)});
 
         if (sendToLocalChat) {

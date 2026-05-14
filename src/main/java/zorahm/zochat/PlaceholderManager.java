@@ -39,14 +39,14 @@ public class PlaceholderManager {
             }
         }
 
-        plugin.getLogger().log(Level.INFO, "Built alias map with {0} entries", aliasToPlaceholder.size());
+        plugin.logDebug(Level.INFO, "placeholder-alias-map", new Object[]{aliasToPlaceholder.size()});
     }
 
     public Component processPlaceholders(Player player, String message) {
-        plugin.getLogger().log(Level.INFO, "Starting placeholder processing for {0}: {1}", new Object[]{player.getName(), message});
+        plugin.logDebug(Level.INFO, "placeholder-start-processing", new Object[]{player.getName(), message});
 
         if (!chatConfig.isPlaceholdersEnabled()) {
-            plugin.getLogger().log(Level.INFO, "Placeholders disabled globally for {0}", new Object[]{player.getName()});
+            plugin.logDebug(Level.INFO, "placeholder-globally-disabled", new Object[]{player.getName()});
             return miniMessage.deserialize(message);
         }
 
@@ -71,7 +71,7 @@ public class PlaceholderManager {
                 String value = processPlaceholder(player, placeholderName);
                 if (value != null) {
                     replacements.put(pattern, value);
-                    plugin.getLogger().log(Level.INFO, "Processed ^{0} for {1}: {2}",
+                    plugin.logDebug(Level.INFO, "placeholder-processed",
                             new Object[]{aliasOrName, player.getName(), value});
                 }
             }
@@ -82,7 +82,7 @@ public class PlaceholderManager {
             processedMessage = processedMessage.replace(entry.getKey(), entry.getValue());
         }
 
-        plugin.getLogger().log(Level.INFO, "Final processed message for {0}: {1}", new Object[]{player.getName(), processedMessage});
+        plugin.logDebug(Level.INFO, "placeholder-final-message", new Object[]{player.getName(), processedMessage});
         return miniMessage.deserialize(processedMessage);
     }
 
