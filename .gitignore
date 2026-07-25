@@ -1,0 +1,28 @@
+# Build outputs
+build/
+target/
+*.class
+*.jar
+# ...except the wrapper jar — without it a fresh clone can't run ./gradlew
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle
+.gradle/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+
+# AI
+.claude/
+docs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Runtime
+/run/
+*.db
+*.log
