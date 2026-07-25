@@ -1,0 +1,55 @@
+# ════════════════════════════════════════════
+#            zoChat Bubble Chat
+# ════════════════════════════════════════════
+#
+# Shows a floating bubble (a TextDisplay entity) above the player's head when they
+# chat or run the bubble command. It works IN ADDITION to normal chat — the message
+# still appears in chat as usual.
+
+# Master toggle for the bubble feature.
+enabled: true
+
+# When the bubble is shown:
+#   CHAT          — when the player sends a chat message
+#   COMMAND       — when the player runs /bubble (alias /b) <text>
+#   CHAT_COMMAND  — both of the above
+trigger-type: CHAT_COMMAND
+
+# Bubble text. Supports MiniMessage formatting, PlaceholderAPI (%...%, resolved per player)
+# and the internal {playerName}/{message} placeholders. The player's {message} is shown as
+# plain text (its own formatting tags are escaped) so nobody can inject colours or clicks.
+format: "<white>{playerName}:</white> {message}"
+
+# How the bubble faces the camera: FIXED, VERTICAL, HORIZONTAL or CENTER.
+billboard: CENTER
+
+# Show the bubble through blocks (true) or hide it behind them (false).
+see-through: false
+
+# Drop shadow behind the text.
+text-shadow: false
+
+# Pixel width before the text wraps to a new line (100 ≈ 16 characters).
+line-width: 200
+
+# Extra height above the player's head, in blocks.
+head-distance: 0.5
+
+# Text size multiplier.
+scale: 1.0
+
+# Background plate behind the text. Set opacity to 0 to disable the background entirely.
+background:
+  color: "#000000"   # RGB hex
+  opacity: 0         # 0..255
+
+# Display time = max(minimum-time, message length × time-per-symbol), in seconds.
+time-per-symbol: 0.1
+minimum-time: 3.0
+
+# Who can show a bubble and where.
+requirements:
+  permission: ""        # "" = everyone may show bubbles
+  min-symbols: 1        # ignore messages shorter than this
+  worlds: []            # [] = all worlds
+  see-own-bubble: true  # does the sender see their own bubble?

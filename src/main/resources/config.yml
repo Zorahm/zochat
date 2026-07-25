@@ -1,134 +1,109 @@
 # ════════════════════════════════════════════
-#            Конфигурация zoChat
+#            zoChat Configuration
 # ════════════════════════════════════════════
 
-config-version: 1.6 # Не меняйте!
 debug-mode: false
 
-# Язык сообщений
+# Message language
 message: ru
 
-# ───── Настройки антиспама ─────
+# System message prefix (applied to all messages except /chat help)
+message-prefix: "<#d45079>zoChat</#d45079> <#c0c0c0>•</#c0c0c0> "
+
+# ───── Anti-spam settings ─────
 anti-spam:
-  enabled: true                        # Включить антиспам для ограничения частоты сообщений
-  local-cooldown: 3                    # Кулдаун для локального чата (в секундах)
-  global-cooldown: 5                   # Кулдаун для глобального чата (в секундах)
-  private-cooldown: 2                  # Кулдаун для личных сообщений (в секундах)
-  bypass-permission: "zochat.spam.bypass" # Право для обхода антиспама
+  enabled: true                        # Enable anti-spam to limit message frequency
+  local-cooldown: 3                    # Cooldown for local chat (in seconds)
+  global-cooldown: 5                   # Cooldown for global chat (in seconds)
+  private-cooldown: 2                  # Cooldown for private messages (in seconds)
+  bypass-permission: "zochat.spam.bypass" # Permission to bypass anti-spam
 
-# ───── Настройки фильтрации слов ─────
+# ───── Banned words filter settings ─────
 banned-words:
-  enabled: true                        # Включить фильтрацию запрещённых слов
-  mode: "smart"                        # Режим фильтрации: "exact" (точное совпадение), "contains" (содержит), "smart" (умная проверка с нормализацией)
-  action: "block"                      # Действие: "block" (заблокировать сообщение), "replace" (заменить на ***)
-  words: []                            # Список запрещённых слов (например, ["плохое_слово", "regex:\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b"])
-                                       # Для регулярных выражений используйте префикс "regex:" (например, "regex:\\b(bad|word)\\b")
+  enabled: true                        # Enable banned words filtering
+  mode: "smart"                        # Filter mode: "exact", "contains", "smart" (smart check with normalization)
+  action: "block"                      # Action: "block" (block message), "replace" (replace with ***)
+  normalize: true                      # Normalize leet/Cyrillic (h3ll0 → hello). Disable on false positives
+  words: []                            # List of banned words (e.g., ["bad_word", "regex:\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b"])
+                                       # For regex patterns use the "regex:" prefix (e.g., "regex:\\b(bad|word)\\b")
 
-# ───── Настройки для упоминаний ─────
+# ───── Mention settings ─────
 mention:
-  # Обычное упоминание @PlayerName
-  format: "<yellow><bold>@{player}</bold></yellow>"  # Формат подсветки упоминания
-  sound: "ENTITY_EXPERIENCE_ORB_PICKUP"             # Звук при упоминании
-  message: "<yellow>Тебя упомянули в чате!</yellow>" # Уведомление через Action Bar
+  # Regular mention @PlayerName
+  format: "<yellow><bold>@{player}</bold></yellow>"  # Mention highlight format
+  sound: "ENTITY_EXPERIENCE_ORB_PICKUP"              # Mention sound
+  message: "<yellow>Тебя упомянули в чате!</yellow>" # Action Bar notification
 
-  # Упоминание @everyone - упоминает всех игроков на сервере
-  everyone-permission: "zochat.mention.everyone"    # Право для использования @everyone
-  everyone-format: "<red><bold>@everyone</bold></red>"  # Формат отображения @everyone
-  everyone-message: "<red>Вас упомянули через @everyone!</red>"  # Уведомление при @everyone
+  # @everyone mention - mentions all players on the server
+  everyone-permission: "zochat.mention.everyone"    # Permission to use @everyone
+  everyone-format: "<red><bold>@everyone</bold></red>"  # @everyone display format
+  everyone-message: "<red>Вас упомянули через @everyone!</red>"  # @everyone notification
 
-  # Упоминание @here - упоминает игроков поблизости
-  here-permission: "zochat.mention.here"            # Право для использования @here
-  here-format: "<gold><bold>@here</bold></gold>"    # Формат отображения @here
-  here-message: "<gold>Вас упомянули через @here!</gold>"  # Уведомление при @here
-  here-radius: 100                                  # Радиус действия @here (в блоках)
+  # @here mention - mentions nearby players
+  here-permission: "zochat.mention.here"            # Permission to use @here
+  here-format: "<gold><bold>@here</bold></gold>"    # @here display format
+  here-message: "<gold>Вас упомянули через @here!</gold>"  # @here notification
+  here-radius: 100                                  # @here radius (in blocks)
 
-# ───── Настройки локального чата ─────
+# ───── Local chat settings ─────
 local-chat:
-  enabled: true                        # Включить локальный чат
-  radius: 50                           # Радиус действия локального чата
-  format: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
-  command: "/lo"                       # Команда для локального чата
+  enabled: true                        # Enable local chat
+  radius: 50                           # Local chat radius
+  format: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Chat format
 
-# ───── Настройки глобального чата ─────
+# ───── Global chat settings ─────
 global-chat:
-  enabled: true                        # Включить глобальный чат
-  format: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
-  command: "/g"                        # Команда для глобального чата
+  enabled: true                        # Enable global chat
+  format: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Chat format
 
-# ───── Настройки для приватных сообщений ─────
+# ───── /say formatting ─────
+say:
+  enabled: true                        # Format vanilla /say output like chat (off = untouched)
+  console-name: "Server"               # {player} name for /say from console/command blocks
+  # Tokens: {player}, {message}. Player /say escapes the text (no injection); console /say parses it as MiniMessage.
+  format: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
+
+# ───── Private message settings ─────
 private-messages:
-  format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Входящее сообщение
-  reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Исходящее сообщение
+  format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Incoming message
+  reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Outgoing message
 
-# ───── Настройки оффлайн-сообщений ─────
+# ───── Offline message settings ─────
 offline-messages:
   enabled: true
 
-# ───── Настройки базы данных для логирования чата ─────
+# ───── Database settings for chat logging ─────
 database:
-  type: "sqlite"                        # Выберите тип базы данных: "sqlite" или "mysql"
+  type: "sqlite"                        # Choose database type: "sqlite" or "mysql"
   mysql:
-    host: "localhost"                    # Адрес MySQL сервера
-    port: 3306                           # Порт MySQL сервера
-    database: "minecraft_chat"           # Название базы данных
-    username: "root"                     # Имя пользователя для подключения
-    password: "password"                 # Пароль для доступа к базе данных
+    host: "localhost"                    # MySQL server address
+    port: 3306                           # MySQL server port
+    database: "minecraft_chat"           # Database name
+    username: "root"                     # Username for connection
+    password: "password"                 # Database password
 
-# ───── Настройки сообщений о входе, выходе и достижениях ─────
+# ───── Join and quit message settings ─────
 join-message:
-  enabled: false                        # Включить сообщения о входе
-  format: "<gradient:#55ff55:#aaffaa>{player} присоединился к игре!</gradient>"  # Формат сообщения
-  sound: "ENTITY_PLAYER_LEVELUP"       # Звук при входе (опционально)
-  stealth-permission: "zochat.stealth.join"  # Право для скрытия сообщения о входе
+  enabled: false                        # Enable join messages
+  format: "<gradient:#55ff55:#aaffaa>{player} присоединился к игре!</gradient>"  # Message format
+  sound: "ENTITY_PLAYER_LEVELUP"       # Join sound (optional)
+  stealth-permission: "zochat.stealth.join"  # Permission to hide join message
 
 quit-message:
-  enabled: false                        # Включить сообщения о выходе
-  format: "<gradient:#ff5555:#ffaaaa>{player} покинул игру!</gradient>"  # Формат сообщения
-  sound: "ENTITY_VILLAGER_NO"          # Звук при выходе (опционально)
-  stealth-permission: "zochat.stealth.quit"  # Право для скрытия сообщения о выходе
+  enabled: false                        # Enable quit messages
+  format: "<gradient:#ff5555:#ffaaaa>{player} покинул игру!</gradient>"  # Message format
+  sound: "ENTITY_VILLAGER_NO"          # Quit sound (optional)
+  stealth-permission: "zochat.stealth.quit"  # Permission to hide quit message
 
-advancement-message:
-  enabled: false                        # Включить кастомные сообщения о достижениях
-  format: "<yellow>{player} получил достижение <green>{advancement}</green>!</yellow>\n<gray>{description}</gray>"  # Формат сообщения. Доступные плейсхолдеры: {player}, {advancement}, {description}
-  sound: "UI_TOAST_CHALLENGE_COMPLETE"  # Звук при достижении (опционально)
+# ───── Smart placeholder settings (^loc, ^world, ...) ─────
+# Moved to placeholders.yml — built-in/custom ^ placeholders and world-name translation.
 
-# ───── Настройки умных плейсхолдеров ─────
-# Игроки могут использовать плейсхолдеры в чате (например: "Я нахожусь ^loc")
-# Каждый плейсхолдер может иметь алиасы для удобства
-placeholders:
-  enabled: true                        # Включить умные плейсхолдеры
-  loc:
-    enabled: true                      # Включить плейсхолдер ^loc
-    aliases: ["coords", "pos", "где"]   # Алиасы: ^coords, ^pos, ^где
-    permission: "zochat.placeholder.loc"  # Право для использования
-    format: "<gray>{x}, {y}, {z}</gray>"  # Формат координат. Доступно: {x}, {y}, {z}, {world}
-  world:
-    enabled: true
-    aliases: ["мир", "w"]
-    permission: "zochat.placeholder.world"
-    format: "<aqua>{world}</aqua>"     # Формат мира. Доступно: {world}
-  time:
-    enabled: true
-    aliases: ["время", "clock"]
-    permission: "zochat.placeholder.time"
-    format: "<gray>{time}</gray>"      # Формат времени. Доступно: {time} (время в мире), {realtime} (реальное время)
-  health:
-    enabled: true
-    aliases: ["hp", "здоровье"]
-    permission: "zochat.placeholder.health"
-    format: "<red>{health} ♥</red>"    # Формат здоровья. Доступно: {health}, {maxhealth}
-  ping:
-    enabled: true
-    aliases: ["пинг", "latency"]
-    permission: "zochat.placeholder.ping"
-    format: "<yellow>{ping}ms</yellow>"  # Формат пинга. Доступно: {ping}
-  biome:
-    enabled: true
-    aliases: ["биом", "b"]
-    permission: "zochat.placeholder.biome"
-    format: "<green>{biome}</green>"   # Формат биома. Доступно: {biome}
-  item:
-    enabled: true
-    aliases: ["предмет", "hand"]
-    permission: "zochat.placeholder.item"
-    format: "<blue>[{item}]</blue>"    # Формат предмета в руке. Доступно: {item}, {amount}
+# ───── PlaceholderAPI integration ─────
+# Expands external %...% placeholders (e.g. %vault_prefix%, %player_world%).
+# No effect unless the PlaceholderAPI plugin is installed. zoChat also registers
+# its own %zochat_...% placeholders for other plugins to read.
+placeholder-api:
+  enabled: true                        # Master toggle for PlaceholderAPI integration
+  format: true                         # Expand %...% in chat formats (admin-controlled, safe)
+  player-messages: false               # Expand %...% players type in their own messages (abuse risk — opt-in)
+  player-permission: "zochat.placeholder.papi"  # Permission required for player-message expansion

@@ -1,5 +1,4 @@
 # welcome_messages.yml
-welcome-messages-version: 1.0.0
 enabled: false
 delay: 20
 messages:

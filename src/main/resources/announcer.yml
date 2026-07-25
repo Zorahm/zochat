@@ -1,0 +1,57 @@
+# ════════════════════════════════════════════
+#            zoChat Announcer
+# ════════════════════════════════════════════
+#
+# Automated chat broadcasts on a timer. You can define as many announcers as you
+# like — each runs on its own interval and cycles through its own announcement IDs.
+# The announcement bodies are defined once under "announcements:" and referenced by ID.
+
+# Master toggle for the whole announcer system.
+enabled: true
+
+# ───── Announcers ─────
+# Each entry is one independent announcer.
+#   enabled        — turn this single announcer on/off
+#   interval       — seconds between broadcasts
+#   selection-type — SEQUENTIAL (next in list each time) or RANDOM (a random one each time)
+#   announcements  — list of announcement IDs (must exist under "announcements:" below)
+announcers:
+  - enabled: true
+    interval: 600
+    selection-type: SEQUENTIAL
+    announcements:
+      - "rules"
+      - "discord"
+  - enabled: false
+    interval: 300
+    selection-type: RANDOM
+    announcements:
+      - "vote"
+
+# ───── Announcement definitions ─────
+# Referenced by ID from the announcers above.
+#   lines      — one or more lines to send. MiniMessage formatting and PlaceholderAPI
+#                placeholders (%...%) are supported; PAPI is resolved per player.
+#   sound      — sound played to each recipient ("" to disable)
+#   permission — only players with this permission receive it ("" = everyone)
+#   worlds     — only players in these worlds receive it ([] = all worlds)
+announcements:
+  rules:
+    lines:
+      - "<gradient:#ff6b6b:#ffa3a3>Помните правила сервера!</gradient>"
+      - "<gray>Подробнее: <white>/rules</white></gray>"
+    sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+    permission: ""
+    worlds: []
+  discord:
+    lines:
+      - "<#5865F2>Наш Discord: <white>discord.gg/example</white></#5865F2>"
+    sound: ""
+    permission: ""
+    worlds: []
+  vote:
+    lines:
+      - "<gold>Поддержи сервер голосом: <white>/vote</white></gold>"
+    sound: ""
+    permission: ""
+    worlds: []

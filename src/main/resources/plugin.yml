@@ -1,6 +1,6 @@
 name: zoChat
-version: 1.6
-main: zorahm.zochat.ChatPlugin
+version: '${version}'
+main: zorahm.zochat.ZoChatPlugin
 api-version: 1.21
 description: Enhanced chat plugin with local/global chat, mentions (@everyone/@here), smart placeholders, advanced word filter, and more.
 author: ZorahM
@@ -9,6 +9,7 @@ depend:
   - LuckPerms
 softdepend:
   - Adventure
+  - PlaceholderAPI
 commands:
   chat:
     description: Управление настройками чата
@@ -30,6 +31,15 @@ commands:
     description: Ответ на последнее приватное сообщение
     usage: /<command> <сообщение>
     aliases: [r]
+  chatlog:
+    description: Просмотр и очистка логов чата
+    usage: /<command> <игрок|clear>
+    permission: zochat.admin
+  bubble:
+    description: Показать всплывающее сообщение (бабл) над головой
+    usage: /<command> <сообщение>
+    aliases: [b]
+    permission: zochat.bubble
 permissions:
   zochat.admin:
     description: Доступ к админским командам плагина (например, /chat reload)
@@ -43,8 +53,20 @@ permissions:
   zochat.msg:
     description: Доступ к отправке приватных сообщений
     default: true
+  zochat.bubble:
+    description: Доступ к команде /bubble
+    default: true
   zochat.spam.bypass:
     description: Обход ограничений антиспама
+    default: op
+  zochat.command.bypass:
+    description: Позволяет выполнять запрещённые (консольные) команды
+    default: op
+  zochat.stealth.join:
+    description: Скрывает сообщение о входе
+    default: op
+  zochat.stealth.quit:
+    description: Скрывает сообщение о выходе
     default: op
   zochat.mention.everyone:
     description: Доступ к упоминанию всех игроков через @everyone
@@ -73,3 +95,6 @@ permissions:
   zochat.placeholder.item:
     description: Доступ к использованию плейсхолдера ^item (предмет в руке)
     default: true
+  zochat.placeholder.papi:
+    description: Разрешает раскрывать PlaceholderAPI плейсхолдеры (%...%) в своих сообщениях
+    default: op

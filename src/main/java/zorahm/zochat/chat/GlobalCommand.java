@@ -1,0 +1,28 @@
+package zorahm.zochat.chat;
+
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import zorahm.zochat.config.Messages;
+
+public final class GlobalCommand implements CommandExecutor {
+    private final ChatService chat;
+    private final Messages messages;
+
+    public GlobalCommand(ChatService chat, Messages messages) {
+        this.chat = chat;
+        this.messages = messages;
+    }
+
+    @Override
+    public boolean onCommand(CommandSender s, Command c, String label, String[] args) {
+        if (!(s instanceof Player p)) {
+            s.sendMessage(messages.component("errors.only-players"));
+            return true;
+        }
+        if (args.length == 0) return true;
+        chat.send(p, String.join(" ", args), ChatChannel.GLOBAL);
+        return true;
+    }
+}

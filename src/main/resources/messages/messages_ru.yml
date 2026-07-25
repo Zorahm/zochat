@@ -1,5 +1,3 @@
-# Объявление: оригинальный текст.
-
 # Ошибки
 errors:
   only-players: "<red>Команда доступна только игрокам!</red>"
@@ -11,6 +9,11 @@ private-messages:
   player-not-found: "<red>Игрок {player} не найден!</red>"
   offline-sent: "<green>Сообщение отправлено игроку {player} (оффлайн).</green>"
   offline-disabled: "<red>Оффлайн-сообщения отключены.</red>"
+
+# Сообщения для команды /bubble
+bubble:
+  usage: "<red>Использование: /bubble <сообщение></red>"
+  disabled: "<red>Баблы отключены на сервере.</red>"
 
 # Сообщения для команды /reply
 reply:
@@ -29,6 +32,7 @@ chat:
   reload-success: "<green>Конфигурация плагина успешно перезагружена.</green>"
   unknown-subcommand: "<red>Неизвестная подкоманда. Используйте /chat help.</red>"
   banned-word: "<red>Сообщение содержит запрещённые слова!</red>"
+  offline-messages-header: "<gray>У вас {count} непрочитанных сообщений:</gray>"
   chat-help:
     - ""
     - "<bold><gradient:#ff6b6b:#ffa3a3>🌀 ZoChat Справка</gradient></bold>"
@@ -49,3 +53,20 @@ chat:
     - "<#a4b0be>🔗 Дополнительно</#a4b0be>"
     - "  <hover:show_text:'<gray>Упомяните игрока в любом чате\n<white>Пример:</white> <gray>Привет, @Ник!</gray>'><gray>• @Игрок</gray></hover> — <white>Упоминание</white>"
     - ""
+
+# Сообщения для /chatlog
+chatlog:
+  usage: "<red>Использование: /chatlog <игрок|clear></red>"
+  header: "<gray>--- Последние сообщения {player} ---</gray>"
+  message: "<gray>• {message}</gray>"
+  "no-messages": "<gray>Сообщений не найдено.</gray>"
+  cleared: "<green>Удалено {count} записей из логов чата.</green>"
+  error: "<red>Ошибка при обращении к базе данных.</red>"
+
+# Запрещённые команды (только из консоли)
+command-guard:
+  blocked: "<red>Эта команда доступна только из консоли.</red>"
+
+# Плейсхолдеры
+placeholders:
+  empty-hand: "пусто"

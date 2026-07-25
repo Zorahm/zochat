@@ -1,0 +1,70 @@
+# ════════════════════════════════════════════
+#            zoChat Placeholders (^)
+# ════════════════════════════════════════════
+#
+# Players can drop placeholders into their chat with the "^" prefix, e.g. "I'm at ^loc".
+# Each placeholder has aliases, a permission and a MiniMessage format.
+
+# Master toggle for the whole ^ placeholder system.
+enabled: true
+
+# ───── World name translation ─────
+# Display names for ^world and the {world} token inside ^loc.
+# Key = real world folder name, value = shown name. Unlisted worlds keep their real name.
+world-names:
+  world: "Спавн"
+  world_nether: "Ад"
+  world_the_end: "Энд"
+
+# ───── Built-in placeholders ─────
+# Resolved from the player's live state. Each: enabled, aliases, permission, format.
+builtin:
+  loc:
+    enabled: true
+    aliases: ["coords", "pos", "где"]
+    permission: "zochat.placeholder.loc"
+    format: "<gray>{x}, {y}, {z}</gray>"     # available: {x}, {y}, {z}, {world}
+  world:
+    enabled: true
+    aliases: ["мир", "w"]
+    permission: "zochat.placeholder.world"
+    format: "<aqua>{world}</aqua>"            # available: {world}
+  time:
+    enabled: true
+    aliases: ["время", "clock"]
+    permission: "zochat.placeholder.time"
+    format: "<gray>{time}</gray>"             # available: {time} (in-game), {realtime} (real)
+  health:
+    enabled: true
+    aliases: ["hp", "здоровье"]
+    permission: "zochat.placeholder.health"
+    format: "<red>{health} ♥</red>"           # available: {health}, {maxhealth}
+  ping:
+    enabled: true
+    aliases: ["пинг", "latency"]
+    permission: "zochat.placeholder.ping"
+    format: "<yellow>{ping}ms</yellow>"        # available: {ping}
+  biome:
+    enabled: true
+    aliases: ["биом", "b"]
+    permission: "zochat.placeholder.biome"
+    format: "<green>{biome}</green>"           # available: {biome}
+  item:
+    enabled: true
+    aliases: ["предмет", "hand"]
+    permission: "zochat.placeholder.item"
+    format: "<blue>[{item}]</blue>"            # available: {item}, {amount}
+
+# ───── Custom placeholders ─────
+# Backed by PlaceholderAPI (requires the PlaceholderAPI plugin). For each entry:
+#   value  — a PAPI string (%...%) resolved per player
+#   format — MiniMessage wrapper; the resolved value is substituted as {value}
+#   permission: "" lets everyone use it.
+# Uncomment the example below or add your own:
+custom: {}
+#  level:
+#    enabled: true
+#    aliases: ["lvl"]
+#    permission: "zochat.placeholder.level"
+#    value: "%player_level%"
+#    format: "<green>Lvl {value}</green>"
