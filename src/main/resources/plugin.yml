@@ -12,89 +12,89 @@ softdepend:
   - PlaceholderAPI
 commands:
   chat:
-    description: Управление настройками чата
+    description: Manage chat settings
     usage: /<command> [reload]
     aliases: [zochat]
   global:
-    description: Отправка сообщения в глобальный чат
-    usage: /<command> [сообщение]
+    description: Send a message to global chat
+    usage: /<command> [message]
     aliases: [g]
   local:
-    description: Отправка сообщения в локальный чат
-    usage: /<command> [сообщение]
+    description: Send a message to local chat
+    usage: /<command> [message]
     aliases: [l]
   msg:
-    description: Отправка приватного сообщения игроку
-    usage: /<command> <игрок> <сообщение>
+    description: Send a private message to a player
+    usage: /<command> <player> <message>
     aliases: [m, tell, w]
   reply:
-    description: Ответ на последнее приватное сообщение
-    usage: /<command> <сообщение>
+    description: Reply to the last private message
+    usage: /<command> <message>
     aliases: [r]
   chatlog:
-    description: Просмотр и очистка логов чата
-    usage: /<command> <игрок|clear>
+    description: View and clear chat logs
+    usage: /<command> <player|clear>
     permission: zochat.admin
   bubble:
-    description: Показать всплывающее сообщение (бабл) над головой
-    usage: /<command> <сообщение>
+    description: Show a floating bubble above your head
+    usage: /<command> <message>
     aliases: [b]
     permission: zochat.bubble
 permissions:
   zochat.admin:
-    description: Доступ к админским командам плагина (например, /chat reload)
+    description: Access to admin commands (e.g. /chat reload)
     default: op
   zochat.global:
-    description: Доступ к глобальному чату
+    description: Access to global chat
     default: true
   zochat.local:
-    description: Доступ к локальному чату
+    description: Access to local chat
     default: true
   zochat.msg:
-    description: Доступ к отправке приватных сообщений
+    description: Access to private messages
     default: true
   zochat.bubble:
-    description: Доступ к команде /bubble
+    description: Access to the /bubble command
     default: true
   zochat.spam.bypass:
-    description: Обход ограничений антиспама
+    description: Bypass anti-spam cooldowns
     default: op
   zochat.command.bypass:
-    description: Позволяет выполнять запрещённые (консольные) команды
+    description: Allows running blocked (console-only) commands
     default: op
   zochat.stealth.join:
-    description: Скрывает сообщение о входе
+    description: Hides the join message
     default: op
   zochat.stealth.quit:
-    description: Скрывает сообщение о выходе
+    description: Hides the quit message
     default: op
   zochat.mention.everyone:
-    description: Доступ к упоминанию всех игроков через @everyone
+    description: Access to mentioning all players with @everyone
     default: op
   zochat.mention.here:
-    description: Доступ к упоминанию игроков поблизости через @here
+    description: Access to mentioning nearby players with @here
     default: op
   zochat.placeholder.loc:
-    description: Доступ к использованию плейсхолдера ^loc (координаты)
+    description: Access to the ^loc placeholder (coordinates)
     default: true
   zochat.placeholder.world:
-    description: Доступ к использованию плейсхолдера ^world (мир)
+    description: Access to the ^world placeholder (world)
     default: true
   zochat.placeholder.time:
-    description: Доступ к использованию плейсхолдера ^time (время)
+    description: Access to the ^time placeholder (time)
     default: true
   zochat.placeholder.health:
-    description: Доступ к использованию плейсхолдера ^health (здоровье)
+    description: Access to the ^health placeholder (health)
     default: true
   zochat.placeholder.ping:
-    description: Доступ к использованию плейсхолдера ^ping (пинг)
+    description: Access to the ^ping placeholder (ping)
     default: true
   zochat.placeholder.biome:
-    description: Доступ к использованию плейсхолдера ^biome (биом)
+    description: Access to the ^biome placeholder (biome)
     default: true
   zochat.placeholder.item:
-    description: Доступ к использованию плейсхолдера ^item (предмет в руке)
+    description: Access to the ^item placeholder (item in hand)
     default: true
   zochat.placeholder.papi:
-    description: Разрешает раскрывать PlaceholderAPI плейсхолдеры (%...%) в своих сообщениях
+    description: Allows expanding PlaceholderAPI placeholders (%...%) in your own messages
     default: op
