@@ -26,21 +26,24 @@ build/libs/zoChat-2.0.0.jar
 
 ## Architecture
 
-### Core Plugin Lifecycle (ZoChatPlugin.java)
+### Core Plugin Lifecycle (ZoChatPlugin.kt)
 
-Main entry point at `src/main/java/zorahm/zochat/ZoChatPlugin.java`. On enable:
+Main entry point at `src/main/kotlin/zorahm/zochat/ZoChatPlugin.kt`. On enable:
 1. Displays ASCII banner using Adventure Components
-2. Checks for LuckPerms dependency (required)
-3. Initializes: ChatConfig, Messages (ru/en), Database (SQLite/MySQL), repositories
-4. Creates services: BannedWordsFilter, MentionHandler, PlaceholderService, ChatService, PrivateMessageService, WelcomeMessages
-5. Registers commands: `/chat`, `/global` (`/g`), `/local` (`/l`), `/msg`, `/reply` (`/r`), `/chatlog`
-6. Registers event listeners: ChatListener, PresenceListener
+2. Checks for LuckPerms dependency (required) — disables the plugin when missing
+3. Preloads classes (`ClassPreloader`), then initializes: ChatConfig, Messages (ru/en), Database (SQLite/MySQL), repositories
+4. Creates services: BannedWordsFilter, MentionHandler, PapiHook, PlaceholderService, BubbleService, ChatService, PrivateMessageService, WelcomeMessages, AnnouncerService, CommandGuardConfig
+5. Registers commands: `/chat`, `/global` (`/g`), `/local` (`/l`), `/msg`, `/reply` (`/r`), `/chatlog`, `/bubble` (`/b`)
+6. Registers event listeners: ChatListener, PresenceListener, CommandGuardListener, SayListener
+7. Registers the `%zochat_...%` expansion — only when PlaceholderAPI is actually installed
 
 ### Package Layout
 
+Java and Kotlin live in the same package tree (`src/main/java/...` + `src/main/kotlin/...`); the extension below tells you which source set a file is in.
+
 ```
 zorahm.zochat
-├── ZoChatPlugin.java                 // lifecycle + manual DI wiring only
+├── ZoChatPlugin.kt                   // lifecycle + manual DI wiring only
 ├── config/
 │   ├── ChatConfig.java               // typed getters over config.yml
 │   ├── Messages.java                 // ru/en player-facing strings
@@ -51,13 +54,15 @@ zorahm.zochat
 │   ├── ChatListener.java             // AsyncChatEvent -> ChatService
 │   ├── GlobalCommand.java            // /g -> ChatService.send(GLOBAL)
 │   ├── LocalCommand.java             // /l -> ChatService.send(LOCAL)
-│   ├── PrefixFormatter.java          // LuckPerms legacy -> Component
+│   ├── PrefixFormatter.java          // LuckPerms legacy -> MiniMessage / Component
 │   ├── MentionHandler.java           // @player/@everyone/@here
 │   ├── MentionTabCompleter.java      // tab completion for @mentions
-│   ├── BannedWordsFilter.kt          // exact/contains/smart filter + position-mapped normalization (Kotlin)
+│   ├── PlaceholderService.java       // ^loc/^world/custom; regex match; escapes player input
+│   ├── BannedWordsFilter.kt          // exact/contains/smart filter + position-mapped normalization
 │   ├── CooldownService.kt            // per-channel anti-spam cooldowns (ConcurrentHashMap)
 │   ├── PlaceholderConfig.kt          // loads placeholders.yml (builtin/custom ^ defs + world-names)
-│   └── PlaceholderService.java       // ^loc/^world/custom; regex match; escapes player input
+│   ├── PapiHook.kt                   // the ONLY place that touches PlaceholderAPI classes
+│   └── ZoChatExpansion.kt            // our own %zochat_...% expansion (sync, no-DB values only)
 ├── announcer/
 │   ├── AnnouncerConfig.kt            // loads announcer.yml (announcers + announcements-by-ID)
 │   ├── AnnouncerService.kt           // one repeating main-thread task per announcer (staggered), per-player send with per-line parse cache
@@ -68,8 +73,14 @@ zorahm.zochat
 │   ├── BubbleService.kt              // TextDisplay above head; 1-tick task follows + expires it
 │   ├── BubbleCommand.kt              // /bubble (/b) <text>
 │   └── TriggerType.kt                // CHAT | COMMAND | CHAT_COMMAND (fallback CHAT)
+├── guard/
+│   ├── CommandGuardConfig.kt         // loads commands.yml (blocked list + toggles)
+│   ├── CommandGuard.kt               // pure blocked/allowed decision incl. namespace forms (unit-tested)
+│   └── CommandGuardListener.kt       // cancels blocked commands + hides them from tab completion
+├── say/
+│   └── SayListener.kt                // reformats vanilla /say (player + console) like chat
 ├── privatemsg/
-│   ├── PrivateMessageService.java    // /msg + /reply core, offline hand-off
+│   ├── PrivateMessageService.kt      // /msg + /reply core, offline hand-off
 │   ├── MsgCommand.java
 │   └── ReplyCommand.java
 ├── presence/
@@ -81,7 +92,7 @@ zorahm.zochat
 │   └── OfflineMessageRepository.java // offline_messages table
 ├── command/
 │   ├── ChatCommand.java              // /chat reload|help
-│   └── ChatLogCommand.java           // /chatlog <player|clear>
+│   └── ChatLogCommand.kt             // /chatlog <player|clear>
 └── util/
     ├── Sounds.kt                     // safe Sound.valueOf -> Optional<Sound>
     └── ClassPreloader.kt             // eager class load at onEnable — lazy loads read the shaded jar on the main thread mid-tick (watchdog stall on slow-I/O hosts)
@@ -116,7 +127,8 @@ SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All
 - `placeholders.yml`: `^` placeholders — built-in + custom (PAPI-backed) + world-name translation
 - `announcer.yml`: Timed chat broadcasts (announcers + announcements-by-ID)
 - `bubble.yml`: Floating bubble chat (TextDisplay) settings
-- `plugin.yml`: Plugin metadata, command definitions, permissions
+- `commands.yml`: Console-only command list for the command guard
+- `plugin.yml`: Plugin metadata, command definitions, permissions. Descriptions here surface in the vanilla `/help` for every player — keep them **English**, unlike the localized `messages_*.yml`
 
 ## Important Implementation Details
 
@@ -165,7 +177,13 @@ JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extend
 ./gradlew test
 ```
 
-Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching).
+Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching), PlaceholderMatchTest (`buildPattern` longest-first matching), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced decisions).
+
+## CI
+
+`.github/workflows/build.yml` builds every push/PR with `./gradlew clean build` and uploads the JAR as a run artifact. `.github/workflows/release.yml` rebuilds on a `v*` tag (or a published release) and attaches the JAR to that GitHub Release.
+
+The wrapper needs its executable bit **in git**, or the runner fails with `./gradlew: Permission denied` — Windows checkouts drop it, so re-add it with `git update-index --chmod=+x gradlew` if it is ever lost.
 
 ## Common Pitfalls
 
