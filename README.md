@@ -1,194 +1,202 @@
-# **zoChat**
+# zoChat
 
-![GitHub](https://img.shields.io/github/license/Zorahm/zoChat) ![Version](https://img.shields.io/badge/version-1.6-blue) ![GitHub Release](https://img.shields.io/github/v/release/Zorahm/zoChat)
+![GitHub](https://img.shields.io/github/license/Zorahm/zoChat) ![GitHub Release](https://img.shields.io/github/v/release/Zorahm/zoChat)
 
-**zoChat** — мощный и гибкий плагин для улучшения чата на Minecraft-серверах. Поддерживает локальный и глобальный чат, упоминания игроков, личные сообщения, кастомное форматирование и интеграцию с LuckPerms для отображения префиксов и суффиксов. Плагин полностью переводимый, с поддержкой настраиваемых сообщений через файлы локализации.
-
----
-
-## 📜 **Особенности**
-
-- **Локальный и глобальный чат**:
-  - Локальный чат (по умолчанию, без `!`) — сообщения видны в радиусе (настраивается в `config.yml`).
-  - Глобальный чат (с `!` или через `/g`) — сообщения видны всем игрокам.
-  - Команды `/l` и `/g` для отправки сообщений в локальный или глобальный чат.
-- **Упоминания игроков через @**:
-  - Подсветка упоминаний в чате (настраиваемый формат).
-  - Звуковое уведомление для упомянутого игрока.
-  - Уведомление через Action Bar.
-  - Работает во всех типах чата (локальный, глобальный).
-- **Кастомное форматирование сообщений**:
-  - Поддержка HEX-цветов и MiniMessage для стилизации текста.
-  - Отдельные форматы для локального, глобального и личных сообщений.
-- **Личные сообщения**:
-  - Команды `/msg` и `/reply` с настраиваемым стилем.
-- **Антиспам и фильтрация**:
-  - Настраиваемые кулдауны: 3с для локального, 5с для глобального, 2с для личных сообщений.
-  - Фильтр запрещённых слов с настраиваемым списком.
-- **Интеграция с LuckPerms**:
-  - Отображение префиксов и суффиксов игроков.
-- **Логирование чата**:
-  - Поддержка MySQL и SQLite для хранения сообщений.
-- **Полная переводимость**:
-  - Все сообщения настраиваются через `messages_xx.yml`.
-- Поддержка Minecraft 1.13+ (совместимость с API 1.13 и выше).
+A Paper plugin that adds local/global chat, private messaging, player mentions, timed announcements, bubble chat and chat logging to Minecraft servers. Integrates with LuckPerms for prefix/suffix display and uses the Adventure API (MiniMessage) for rich text formatting.
 
 ---
 
-## 🔧 **Установка**
+## Features
 
-1. Скачайте последнюю версию `zochat-1.4` из [релизов](https://github.com/Zorahm/zoChat/releases).
-2. Поместите файл в папку `plugins/` вашего сервера.
-3. Перезапустите сервер или используйте `/reload`.
-4. Настройте плагин через файлы `config.yml` и `messages_<lang>.yml`.
+- **Local and global chat**
+  - Local chat (default) — messages visible within a configurable radius.
+  - Global chat (prefix `!` or `/g`) — messages visible to all players.
+  - Commands `/l` and `/g` for explicit channel selection.
+- **Player mentions**
+  - `@PlayerName` with partial name matching, max 5 per message.
+  - `@everyone` / `@here` with permission checks and radius limits.
+  - Sound and action bar notifications for mentioned players.
+- **Private messages**
+  - `/msg` and `/reply`, with offline delivery on next join.
+- **Anti-spam and filtering**
+  - Per-channel cooldowns (local / global / private, configured in seconds).
+  - Banned words filter with `exact`, `contains` and `smart` modes, `block` or `replace` action, plus `regex:` entries.
+- **In-chat placeholders**
+  - `^loc`, `^world`, `^time`, `^health`, `^ping`, `^biome`, `^item` with aliases, per-placeholder permissions and custom PlaceholderAPI-backed entries — all configured in `placeholders.yml`.
+- **PlaceholderAPI integration** (optional)
+  - Expands `%...%` in chat formats, and optionally in player-typed messages (opt-in).
+  - Registers its own expansion: `%zochat_version%`, `%zochat_local_radius%`, `%zochat_here_radius%`, `%zochat_cooldown_local%`, `%zochat_cooldown_global%`.
+- **Announcer**
+  - Timed broadcasts on independent timers, sequential or random rotation, configured in `announcer.yml`.
+- **Bubble chat**
+  - Floating `TextDisplay` above the player's head on chat and/or `/bubble`, configured in `bubble.yml`.
+- **Command guard**
+  - Blocks console-only commands (`/op`, `/stop`, `/seed`, …) for players, including `minecraft:`-namespaced bypasses, configured in `commands.yml`.
+- **`/say` formatting**
+  - Styles vanilla `/say` output like the rest of the chat, for both players and console.
+- **LuckPerms integration**
+  - Prefixes and suffixes are rendered from legacy colour codes *and* MiniMessage tags, so an open colour in a suffix carries into the message.
+- **Chat logging**
+  - SQLite (default) or MySQL backend, all writes async.
+- **Localization**
+  - Russian and English message files; extensible via `messages_<lang>.yml`.
 
 ---
 
-## 📁 **Конфигурация**
+## Requirements
 
-После запуска плагина создаются файлы `config.yml` и `messages_<lang>.yml` (например, `messages_ru.yml`).
+- Paper 1.21.10 (or a compatible fork)
+- Java 21
+- LuckPerms 5.4+ (required)
+- PlaceholderAPI (optional)
 
-### Пример `config.yml`:
+---
+
+## Installation
+
+1. Download the latest release from [GitHub Releases](https://github.com/Zorahm/zoChat/releases).
+2. Place `zoChat-2.0.0.jar` into your server's `plugins/` directory.
+3. Restart the server.
+4. Configure via the files in `plugins/zoChat/` (see below), then run `/chat reload`.
+
+---
+
+## Commands
+
+| Command | Aliases | Description | Permission |
+|---|---|---|---|
+| `/chat reload` | `/zochat` | Reload configuration and messages | `zochat.admin` |
+| `/chat help` | `/zochat` | Show command reference | all players |
+| `/msg <player> <message>` | `/m`, `/tell`, `/w` | Send a private message | `zochat.msg` |
+| `/reply <message>` | `/r` | Reply to the last private message | `zochat.msg` |
+| `/local <message>` | `/l` | Send a message to local chat | `zochat.local` |
+| `/global <message>` | `/g` | Send a message to global chat | `zochat.global` |
+| `/bubble <message>` | `/b` | Show a bubble above your head | `zochat.bubble` |
+| `/chatlog <player\|clear>` | — | View or clear chat logs | `zochat.admin` |
+
+---
+
+## Permissions
+
+| Permission | Description | Default |
+|---|---|---|
+| `zochat.admin` | Admin commands (`/chat reload`, `/chatlog`) | op |
+| `zochat.local` | Use local chat | true |
+| `zochat.global` | Use global chat | true |
+| `zochat.msg` | Send private messages | true |
+| `zochat.bubble` | Use `/bubble` | true |
+| `zochat.spam.bypass` | Bypass anti-spam cooldowns | op |
+| `zochat.command.bypass` | Run commands blocked by the command guard | op |
+| `zochat.stealth.join` | Hide join message | op |
+| `zochat.stealth.quit` | Hide quit message | op |
+| `zochat.mention.everyone` | Use `@everyone` | op |
+| `zochat.mention.here` | Use `@here` | op |
+| `zochat.placeholder.loc` (also `.world`, `.time`, `.health`, `.ping`, `.biome`, `.item`) | Use the matching `^` placeholder | true |
+| `zochat.placeholder.papi` | Expand `%...%` in your own messages | op |
+
+---
+
+## Configuration
+
+| File | Contents |
+|---|---|
+| `config.yml` | Chat formats, cooldowns, banned words, mentions, `/say`, database, join/quit, PlaceholderAPI |
+| `placeholders.yml` | `^` placeholders — built-in, custom (PlaceholderAPI-backed), world-name translation |
+| `announcer.yml` | Announcers and announcement bodies |
+| `bubble.yml` | Bubble chat (TextDisplay) settings |
+| `commands.yml` | Console-only command list for the command guard |
+| `messages/messages_ru.yml`, `messages/messages_en.yml` | Player-facing strings; language selected by `message:` in `config.yml` |
+| `welcome_messages/welcome_messages.yml` | Welcome messages shown on join |
+
+New keys added by plugin updates are merged into your existing files without overwriting your values.
+
+### `config.yml` (excerpt)
+
 ```yaml
-# ════════════════════════════════════════════
-#            Конфигурация zoChat
-# ════════════════════════════════════════════
-
-# Язык сообщений (ru для messages_ru.yml, en для messages_en.yml)
+# Language: ru or en
 message: ru
 
-# ───── Настройки антиспама ─────
 anti-spam:
-  enabled: true                        # Включить антиспам для ограничения частоты сообщений
-  local-cooldown: 3                    # Кулдаун для локального чата (в секундах)
-  global-cooldown: 5                   # Кулдаун для глобального чата (в секундах)
-  private-cooldown: 2                  # Кулдаун для личных сообщений (в секундах)
-  bypass-permission: "chat.spam.bypass" # Право для обхода антиспама
+  enabled: true
+  local-cooldown: 3        # seconds
+  global-cooldown: 5       # seconds
+  private-cooldown: 2      # seconds
+  bypass-permission: "zochat.spam.bypass"
 
-# ───── Настройки фильтрации слов ─────
 banned-words:
-  enabled: true                        # Включить фильтрацию запрещённых слов
-  words: []                            # Список запрещённых слов (например, ["word1", "word2"])
+  enabled: true
+  mode: "smart"            # exact | contains | smart
+  action: "block"          # block | replace
+  normalize: true          # catch l33t / spaced-out / look-alike bypasses
+  words: []                # e.g. ["badword", "regex:\\b\\d{4}\\b"]
 
-# ───── Настройки для упоминаний ─────
-mention:
-  format: "<yellow><bold>@{player}</bold></yellow>"  # Формат подсветки упоминания
-  sound: "ENTITY_EXPERIENCE_ORB_PICKUP"             # Звук при упоминании
-  message: "<yellow>Тебя упомянули в чате!</yellow>" # Уведомление через Action Bar
-
-# ───── Настройки локального чата ─────
 local-chat:
-  enabled: true                        # Включить локальный чат
-  radius: 50                           # Радиус действия локального чата
-  format: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
-  command: "/lo"                       # Команда для локального чата
+  enabled: true
+  radius: 50
+  format: "<gradient:#55ff55:#aaffaa>[Local]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> > </#c0c0c0>{message}"
 
-# ───── Настройки глобального чата ─────
 global-chat:
-  enabled: true                        # Включить глобальный чат
-  format: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Формат чата
-  command: "/g"                        # Команда для глобального чата
+  enabled: true
+  format: "<gradient:#ffaa33:#ffd700>[Global]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> > </#c0c0c0>{message}"
 
-# ───── Настройки для приватных сообщений ─────
+say:
+  enabled: true
+  console-name: "Server"
+  format: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>></#c0c0c0> <white>{message}</white>"
+
 private-messages:
-  format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Входящее сообщение
-  reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Исходящее сообщение
+  format: "<gradient:#f6a0d3:#b47ee5>PM from {player}:</gradient> <white>{message}</white>"
+  reply-format: "<gradient:#b47ee5:#f6a0d3>You -> {player}:</gradient> <white>{message}</white>"
 
-# ───── Настройки базы данных для логирования чата ─────
 database:
-  type: "sqlite"                        # Выберите тип базы данных: "sqlite" или "mysql"
+  type: "sqlite"           # sqlite | mysql
   mysql:
-    host: "localhost"                    # Адрес MySQL сервера
-    port: 3306                           # Порт MySQL сервера
-    database: "minecraft_chat"           # Название базы данных
-    username: "root"                     # Имя пользователя для подключения
-    password: "password"                 # Пароль для доступа к базе данных
+    host: "localhost"
+    port: 3306
+    database: "minecraft_chat"
+    username: "root"
+    password: "password"
+
+placeholder-api:
+  enabled: true
+  format: true             # expand %...% in chat formats (admin-controlled)
+  player-messages: false   # expand %...% players type themselves (opt-in, abuse risk)
+  player-permission: "zochat.placeholder.papi"
 ```
 
-### Пример `messages_ru.yml`:
+Chat formats use MiniMessage: HEX colours (`<#ff5555>`), gradients (`<gradient:#55ff55:#aaffaa>`) and the tokens `{prefix}`, `{suffix}`, `{player}`, `{message}`. Text players type is escaped, so nobody can inject colours or clickable commands through chat.
+
+### `messages/messages_en.yml` (excerpt)
+
 ```yaml
-# Объявление: оригинальный текст.
-
-# Ошибки
 errors:
-  only-players: "<red>Команда доступна только игрокам!</red>"
-  no-permission: "<red>У вас нет доступа к этой команде!</red>"
+  only-players: "<red>This command is for players only!</red>"
+  no-permission: "<red>You do not have permission to do that!</red>"
 
-# Сообщения для приватных сообщений (/msg и /reply)
-private-messages:
-  usage: "<red>Использование: /msg <игрок> <сообщение></red>"
-  player-not-found: "<red>Игрок {player} не найден или не в сети!</red>"
-
-# Сообщения для команды /reply
-reply:
-  usage: "<red>Использование: /reply <сообщение></red>"
-  no-target: "<red>Некому ответить! Сначала отправьте сообщение с помощью /msg.</red>"
-  target-offline: "<red>Игрок, которому вы хотите ответить, не в сети!</red>"
-
-# Сообщения для чата
 chat:
-  spam-warning: "<red>Не спамьте! Подождите немного перед отправкой следующего сообщения.</red>"
-  local-disabled: "<red>Локальный чат отключен на сервере!</red>"
-  message-player: "Написать {player} в ЛС"
-  message-timestamp: "Отправлено: {time}"
-  reload-success: "<green>Конфигурация плагина успешно перезагружена.</green>"
-  unknown-subcommand: "<red>Неизвестная подкоманда. Используйте /chat help.</red>"
-  banned-word: "<red>Сообщение содержит запрещённые слова!</red>"
-  chat-help:
-    - ""
-    - "<bold><gradient:#ff6b6b:#ffa3a3>🌀 ZoChat Справка</gradient></bold>"
-    - "<gray><italic>Наведите курсор на команду, чтобы узнать подробности</italic></gray>"
-    - ""
-    - "<#70a1ff>📜 Основные команды</#70a1ff>"
-    - "  <hover:show_text:'<gray>Перезагружает конфиг и сообщения'><gray>• /chat reload</gray></hover> — <white>Обновить чат</white>"
-    - "  <hover:show_text:'<gray>Показывает это меню'><gray>• /chat help</gray></hover> — <white>Помощь</white>"
-    - ""
-    - "<#ff9ff3>✉️ Личные сообщения</#ff9ff3>"
-    - "  <hover:show_text:'<gray>Отправляет ЛС игроку\n<white>Пример:</white> <gray>/msg Nick Привет!'><gray>• /msg <игрок> <сообщение></gray></hover> — <white>Написать в ЛС</white>"
-    - "  <hover:show_text:'<gray>Ответить на последнее ЛС\n<white>Пример:</white> <gray>/reply Спасибо!'><gray>• /reply <сообщение></gray></hover> — <white>Быстрый ответ</white>"
-    - ""
-    - "<#feca57>🌍 Типы чатов</#feca57>"
-    - "  <hover:show_text:'<gray>Видно всем на сервере\n<white>Пример:</white> <gray>/g Всем привет!'><gray>• /g <сообщение></gray></hover> — <white>Глобальный</white>"
-    - "  <hover:show_text:'<gray>Видно только рядом\n<white>Пример:</white> <gray>/l Где вы?'><gray>• /l <сообщение></gray></hover> — <white>Локальный</white>"
-    - ""
-    - "<#a4b0be>🔗 Дополнительно</#a4b0be>"
-    - "  <hover:show_text:'<gray>Упомяните игрока в любом чате\n<white>Пример:</white> <gray>Привет, @Ник!</gray>'><gray>• @Игрок</gray></hover> — <white>Упоминание</white>"
-    - ""
+  spam-warning: "<red>Don't spam! Wait a bit before sending another message.</red>"
+  banned-word: "<red>Message contains banned words!</red>"
+  local-disabled: "<red>Local chat is disabled on the server!</red>"
 ```
 
 ---
 
-## 📜 **Команды и права**
+## Building from source
 
-### **Команды:**
+```bash
+./gradlew clean build
+```
 
-| Команда               | Описание                                      | Права           |
-|-----------------------|----------------------------------------------|-----------------|
-| `/chat reload`        | Перезагрузить конфигурацию и сообщения.      | zochat.admin    |
-| `/chat help`          | Показать справку по командам.                | Доступно всем   |
-| `/msg <игрок> <текст>`| Отправить личное сообщение.                  | Доступно всем   |
-| `/reply <текст>`      | Ответить на последнее личное сообщение.      | Доступно всем   |
-| `/l <текст>`          | Отправить сообщение в локальный чат.         | Доступно всем   |
-| `/g <текст>`          | Отправить сообщение в глобальный чат.        | Доступно всем   |
+Output: `build/libs/zoChat-2.0.0.jar`
 
-### **Права:**
+Run the test suite:
 
-| Право                 | Описание                                      | По умолчанию     |
-|-----------------------|-----------------------------------------------|------------------|
-| `zochat.admin`        | Доступ к административным командам (`/chat reload`). | Только OP        |
-| `chat.spam.bypass`    | Обход ограничений антиспама.                  | Только OP        |
+```bash
+./gradlew test
+```
 
 ---
 
-## 📚 **API Интеграция**
+## License
 
-Плагин интегрируется с:
-- **LuckPerms** для работы с префиксами и суффиксами.
-- **Adventure API** для цветного форматирования чата (MiniMessage).
-- **MySQL/SQLite** для логирования сообщений.
-
----
-
-## 🙌 **Благодарности**
-
-Спасибо сообществу за обратную связь и помощь в тестировании! Если вы нашли баг или у вас есть идеи, создайте issue на [GitHub](https://github.com/Zorahm/zoChat/issues).
+See [LICENSE](LICENSE).
