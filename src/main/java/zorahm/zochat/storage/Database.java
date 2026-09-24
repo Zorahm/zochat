@@ -39,10 +39,28 @@ public final class Database {
     }
 
     public static Database mysql(Plugin plugin, String host, int port, String db, String user, String pass) {
+        return new Database(plugin, true, mysqlUrl(host, port, db), user, pass);
+    }
+
+    static String mysqlUrl(String host, int port, String db) {
         // No autoReconnect=true: it's discouraged by MySQL (can silently drop mid-statement state);
         // conn() below revalidates and reopens dead connections instead.
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + db + "?useSSL=false";
-        return new Database(plugin, true, url, user, pass);
+        // allowPublicKeyRetrieval: MySQL 8's default caching_sha2_password auth refuses to log in over
+        // a non-SSL connection without it ("Public Key Retrieval is not allowed").
+        return "jdbc:mysql://" + host + ":" + port + "/" + db + "?useSSL=false&allowPublicKeyRetrieval=true";
+    }
+
+    // Auto-increment primary key in this database's dialect, for the repositories' CREATE TABLE.
+    public String idColumn() {
+        return idColumn(mysql);
+    }
+
+    // AUTOINCREMENT is SQLite-only syntax — MySQL rejects the whole CREATE TABLE with it, which left
+    // both tables missing and every write failing on MySQL.
+    static String idColumn(boolean mysql) {
+        return mysql
+                ? "id BIGINT PRIMARY KEY AUTO_INCREMENT"
+                : "id INTEGER PRIMARY KEY AUTOINCREMENT";
     }
 
     public void init() {

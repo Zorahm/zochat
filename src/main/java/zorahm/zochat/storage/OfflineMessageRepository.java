@@ -25,7 +25,7 @@ public final class OfflineMessageRepository {
         db.runAsync(() -> {
             try (Statement st = db.conn().createStatement()) {
                 st.execute("CREATE TABLE IF NOT EXISTS offline_messages (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        db.idColumn() + "," +
                         "sender_uuid TEXT NOT NULL," +
                         "receiver_uuid TEXT NOT NULL," +
                         "message TEXT NOT NULL," +

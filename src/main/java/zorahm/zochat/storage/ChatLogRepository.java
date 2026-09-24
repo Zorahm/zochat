@@ -20,7 +20,7 @@ public final class ChatLogRepository {
         db.runAsync(() -> {
             try (Statement st = db.conn().createStatement()) {
                 st.execute("CREATE TABLE IF NOT EXISTS chat_logs (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        db.idColumn() + "," +
                         "player_uuid TEXT NOT NULL," +
                         "message TEXT NOT NULL," +
                         "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)");
