@@ -72,4 +72,27 @@ class CommandGuardTest {
         assertTrue(CommandGuard(emptyList(), blockNamespaced = true).isEmpty)
         assertFalse(guard.isEmpty)
     }
+
+    // Stand-in for the server's command map: label -> the command's name + aliases.
+    private val commandMap = mapOf(
+        "rl" to listOf("reload", "rl"),
+        "bukkit:rl" to listOf("reload", "rl"),
+        "spawn" to listOf("spawn"),
+    )
+    private val namesOf: (String) -> Collection<String> = { commandMap[it] ?: emptyList() }
+
+    @Test
+    fun aliasOfBlockedCommandIsBlocked() {
+        val g = CommandGuard(listOf("reload"), blockNamespaced = true)
+        assertTrue(g.isBlocked("/rl confirm", namesOf))
+        assertTrue(g.isBlocked("/bukkit:rl", namesOf))
+        assertTrue(g.isBlocked("rl", namesOf))
+    }
+
+    @Test
+    fun aliasResolutionLeavesOtherCommandsAlone() {
+        val g = CommandGuard(listOf("reload"), blockNamespaced = true)
+        assertFalse(g.isBlocked("/spawn", namesOf))
+        assertFalse(g.isBlocked("/unknowncmd", namesOf))
+    }
 }

@@ -14,10 +14,15 @@ class CommandGuard(blocked: Collection<String>, private val blockNamespaced: Boo
     /**
      * @param commandLine the raw line as typed, with or without the leading '/'
      *                    (e.g. "/minecraft:op Zorahm", or a bare "op" from a tab-complete list)
+     * @param namesOf     every name of the command a label actually runs (its name plus aliases). Without
+     *                    it an alias sidesteps the list: "reload" is blocked, yet "/rl" runs the same command.
      */
-    fun isBlocked(commandLine: String): Boolean {
+    fun isBlocked(commandLine: String, namesOf: (String) -> Collection<String> = { emptyList() }): Boolean {
         val name = normalize(commandLine, blockNamespaced) ?: return false
-        return name in blockedNames
+        if (name in blockedNames) return true
+        // The label keeps its namespace here: "bukkit:rl" is how the command map knows that form.
+        val label = normalize(commandLine, stripNamespace = false) ?: return false
+        return namesOf(label).any { normalize(it, blockNamespaced) in blockedNames }
     }
 
     companion object {

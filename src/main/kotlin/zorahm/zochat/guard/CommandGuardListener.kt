@@ -1,5 +1,6 @@
 package zorahm.zochat.guard
 
+import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -26,7 +27,7 @@ class CommandGuardListener(
         if (!config.isEnabled) return
         val player = event.player
         if (player.hasPermission(BYPASS_PERMISSION)) return
-        if (!config.guard.isBlocked(event.message)) return
+        if (!config.guard.isBlocked(event.message, ::namesOf)) return
 
         event.isCancelled = true
         if (config.notifyMessage) player.sendMessage(messages.component("command-guard.blocked"))
@@ -46,7 +47,12 @@ class CommandGuardListener(
         if (event.player.hasPermission(BYPASS_PERMISSION)) return
         // getCommands() is a mutable view per the Paper API; removing drops the entry (and its
         // namespaced twin, since isBlocked normalizes) from the suggestion list.
-        event.commands.removeIf { config.guard.isBlocked(it) }
+        event.commands.removeIf { config.guard.isBlocked(it, ::namesOf) }
+    }
+
+    private fun namesOf(label: String): Collection<String> {
+        val command = Bukkit.getCommandMap().getCommand(label) ?: return emptyList()
+        return listOf(command.name) + command.aliases
     }
 
     private companion object {
