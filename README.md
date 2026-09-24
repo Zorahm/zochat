@@ -125,7 +125,7 @@ anti-spam:
 
 banned-words:
   enabled: true
-  mode: "smart"            # exact | contains | smart
+  mode: "smart"            # exact (standalone word) | contains (anywhere) | smart (contains + word boundary)
   action: "block"          # block | replace
   normalize: true          # catch l33t / spaced-out / look-alike bypasses
   words: []                # e.g. ["badword", "regex:\\b\\d{4}\\b"]
