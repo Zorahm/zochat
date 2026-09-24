@@ -45,6 +45,11 @@ mention:
   here-message: "<gold>Вас упомянули через @here!</gold>"  # @here notification
   here-radius: 100                                  # @here radius (in blocks)
 
+# ───── Chat format tokens ─────
+# {prefix}, {suffix} — LuckPerms prefix/suffix; {player}, {message}; {meta:<key>} — any LuckPerms meta value,
+# e.g. /lp group vip meta set clan "&b[Wolves]" -> {meta:clan}. As many keys as you like; missing = empty.
+# {meta:<key>} also works in say.format and in bubble.yml's format.
+
 # ───── Local chat settings ─────
 local-chat:
   enabled: true                        # Enable local chat
@@ -60,7 +65,7 @@ global-chat:
 say:
   enabled: true                        # Format vanilla /say output like chat (off = untouched)
   console-name: "Server"               # {player} name for /say from console/command blocks
-  # Tokens: {player}, {message}. Player /say escapes the text (no injection); console /say parses it as MiniMessage.
+  # Tokens: {player}, {message}, {meta:<key>} (empty for the console). Player /say escapes the text (no injection); console /say parses it as MiniMessage.
   format: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
 
 # ───── Private message settings ─────

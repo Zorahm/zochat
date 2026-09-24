@@ -21,6 +21,7 @@ import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Transformation
 import org.joml.AxisAngle4f
 import org.joml.Vector3f
+import zorahm.zochat.chat.LuckPermsMeta
 import zorahm.zochat.chat.PapiHook
 import java.util.UUID
 
@@ -35,6 +36,7 @@ class BubbleService(
     private val plugin: Plugin,
     private val config: BubbleConfig,
     private val papi: PapiHook,
+    private val meta: LuckPermsMeta,
 ) : Listener {
     private val mm = MiniMessage.miniMessage()
     private val active = HashMap<UUID, Bubble>()
@@ -192,7 +194,7 @@ class BubbleService(
     private fun render(player: Player, message: Component): Component {
         // Format is admin-authored (trusted): resolve {playerName} and PAPI on it first. The message goes
         // in as an inserted component, never as MiniMessage text, so the sender can't inject <click>/colour.
-        val withName = config.format.replace("{playerName}", player.name)
+        val withName = meta.expand(player, config.format).replace("{playerName}", player.name)
         val papiApplied = papi.apply(player, withName)
         return mm.deserialize(
             papiApplied.replace("{message}", "<zochat_message>"),

@@ -15,9 +15,10 @@ enabled: true
 #   CHAT_COMMAND  — both of the above
 trigger-type: CHAT_COMMAND
 
-# Bubble text. Supports MiniMessage formatting, PlaceholderAPI (%...%, resolved per player)
-# and the internal {playerName}/{message} placeholders. The player's {message} is shown as
-# plain text (its own formatting tags are escaped) so nobody can inject colours or clicks.
+# Bubble text. Supports MiniMessage formatting, PlaceholderAPI (%...%, resolved per player),
+# the internal {playerName}/{message} placeholders and {meta:<key>} (a LuckPerms meta value).
+# The player's {message} is shown as plain text (its own formatting tags are escaped) so nobody
+# can inject colours or clicks.
 format: "<white>{playerName}:</white> {message}"
 
 # How the bubble faces the camera: FIXED, VERTICAL, HORIZONTAL or CENTER.

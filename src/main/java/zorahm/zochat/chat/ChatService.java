@@ -123,6 +123,8 @@ public final class ChatService {
         String format = (channel == ChatChannel.LOCAL)
                 ? config.getLocalChatFormat()
                 : config.getGlobalChatFormat();
+        format = LuckPermsMeta.expand(format,
+                key -> user != null ? user.getCachedData().getMetaData().getMetaValue(key) : null);
 
         String timestamp = time.format(Instant.ofEpochMilli(System.currentTimeMillis()));
 

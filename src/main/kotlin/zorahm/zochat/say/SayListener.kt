@@ -10,6 +10,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.server.ServerCommandEvent
 import org.bukkit.permissions.Permissible
+import zorahm.zochat.chat.LuckPermsMeta
 import zorahm.zochat.chat.PapiHook
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.guard.CommandGuard
@@ -25,6 +26,7 @@ import zorahm.zochat.util.PlayerText
 class SayListener(
     private val config: ChatConfig,
     private val papi: PapiHook,
+    private val meta: LuckPermsMeta,
 ) : Listener {
 
     private val mm = MiniMessage.miniMessage()
@@ -48,7 +50,7 @@ class SayListener(
     }
 
     private fun broadcastFromPlayer(sender: Player, rawMessage: String) {
-        var format = config.sayFormat
+        var format = meta.expand(sender, config.sayFormat)
         // Admin-authored format only (safe): expand %...% with the player as context, like chat.
         if (config.isPlaceholderApiEnabled && config.isPlaceholderApiFormatEnabled) {
             format = papi.apply(sender, format)
@@ -61,7 +63,9 @@ class SayListener(
     private fun broadcastFromConsole(rawMessage: String) {
         // Console/command blocks are trusted: their MiniMessage tags are kept so coloured
         // announcements work — that's the whole point of formatting /say for admins.
-        Bukkit.getServer().broadcast(render(config.sayFormat, config.sayConsoleName, rawMessage))
+        // The console has no LuckPerms meta: its {meta:...} tokens resolve to nothing.
+        val format = LuckPermsMeta.expand(config.sayFormat) { null }
+        Bukkit.getServer().broadcast(render(format, config.sayConsoleName, rawMessage))
     }
 
     private fun render(format: String, name: String, message: String): Component {

@@ -22,6 +22,7 @@ import zorahm.zochat.chat.ChatService
 import zorahm.zochat.chat.CooldownService
 import zorahm.zochat.chat.GlobalCommand
 import zorahm.zochat.chat.LocalCommand
+import zorahm.zochat.chat.LuckPermsMeta
 import zorahm.zochat.chat.MentionHandler
 import zorahm.zochat.chat.MentionTabCompleter
 import zorahm.zochat.chat.PapiHook
@@ -97,7 +98,8 @@ class ZoChatPlugin : JavaPlugin() {
         val tabCompleter = MentionTabCompleter(mentions)
 
         val bubbleConfig = BubbleConfig(this)
-        val bubbleService = BubbleService(this, bubbleConfig, papi).also { it.start() }
+        val meta = LuckPermsMeta(luckPerms)
+        val bubbleService = BubbleService(this, bubbleConfig, papi, meta).also { it.start() }
         bubble = bubbleService
 
         val chatService = ChatService(
@@ -115,7 +117,7 @@ class ZoChatPlugin : JavaPlugin() {
             PresenceListener(this, config, messages, welcome, offline, pm, cooldowns), this
         )
         Bukkit.getPluginManager().registerEvents(CommandGuardListener(this, guardConfig, messages), this)
-        Bukkit.getPluginManager().registerEvents(SayListener(config, papi), this)
+        Bukkit.getPluginManager().registerEvents(SayListener(config, papi, meta), this)
         Bukkit.getPluginManager().registerEvents(bubbleService, this)
         val advancements = AdvancementConfig(this)
         advancementConfig = advancements
