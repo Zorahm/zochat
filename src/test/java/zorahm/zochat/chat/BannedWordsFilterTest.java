@@ -91,4 +91,46 @@ class BannedWordsFilterTest {
         assertFalse(r.isBlocked());
         assertEquals("hello friend", r.getProcessedMessage());
     }
+
+    @Test
+    void doubledLetterDoesNotBypass() {
+        assertTrue(BannedWordsFilter.apply("fuuck you", List.of("fuck"), Mode.CONTAINS, Action.BLOCK, true).isBlocked());
+        assertTrue(BannedWordsFilter.apply("fuuck you", List.of("fuck"), Mode.SMART, Action.BLOCK, true).isBlocked());
+    }
+
+    @Test
+    void longerRunOfWordsOwnDoubleLetterMatches() {
+        assertTrue(BannedWordsFilter.apply("you asss", List.of("ass"), Mode.SMART, Action.BLOCK, true).isBlocked());
+        assertTrue(BannedWordsFilter.apply("fagggot", List.of("faggot"), Mode.SMART, Action.BLOCK, true).isBlocked());
+    }
+
+    @Test
+    void shorterRunThanWordDoesNotMatch() {
+        assertFalse(BannedWordsFilter.apply("as it is", List.of("ass"), Mode.SMART, Action.BLOCK, true).isBlocked());
+    }
+
+    @Test
+    void replaceCensorsWholeRepeatedSpan() {
+        FilterResult r = BannedWordsFilter.apply("you fuuuck", List.of("fuck"), Mode.SMART, Action.REPLACE, true);
+        assertEquals("you ******", r.getProcessedMessage());
+    }
+
+    @Test
+    void exactMatchesStandaloneWordInsideSentence() {
+        assertTrue(BannedWordsFilter.apply("you are bad!", List.of("bad"), Mode.EXACT, Action.BLOCK, true).isBlocked());
+        assertTrue(BannedWordsFilter.apply("Bad", List.of("bad"), Mode.EXACT, Action.BLOCK, true).isBlocked());
+    }
+
+    @Test
+    void exactHonoursLeetButNotSpacingOrLongerWords() {
+        assertTrue(BannedWordsFilter.apply("so b4d", List.of("bad"), Mode.EXACT, Action.BLOCK, true).isBlocked());
+        assertFalse(BannedWordsFilter.apply("badminton", List.of("bad"), Mode.EXACT, Action.BLOCK, true).isBlocked());
+        assertFalse(BannedWordsFilter.apply("b a d", List.of("bad"), Mode.EXACT, Action.BLOCK, true).isBlocked());
+    }
+
+    @Test
+    void exactReplaceCensorsOnlyTheWord() {
+        FilterResult r = BannedWordsFilter.apply("bad badminton bad", List.of("bad"), Mode.EXACT, Action.REPLACE, true);
+        assertEquals("*** badminton ***", r.getProcessedMessage());
+    }
 }

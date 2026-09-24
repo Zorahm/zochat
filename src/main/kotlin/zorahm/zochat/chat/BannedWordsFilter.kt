@@ -7,12 +7,11 @@ import java.util.regex.PatternSyntaxException
 /**
  * Banned-words filter v2.
  *
- * Key idea: normalize the message (lowercase, strip separators, collapse repeats,
- * leet/Cyrillic look-alikes) while keeping a position map from each normalized
- * character back to the original. That lets detection and censoring share ONE set
- * of matches — fixing the old version where detection ran on the normalized text
- * but censoring ran literally on the original (so bypassed words were detected yet
- * never censored).
+ * Key idea: normalize the message (lowercase, strip separators, leet/Cyrillic
+ * look-alikes) into runs of identical characters, each keeping the original index
+ * range it came from. That lets detection and censoring share ONE set of matches —
+ * fixing the old version where detection ran on the normalized text but censoring ran
+ * literally on the original (so bypassed words were detected yet never censored).
  */
 class BannedWordsFilter(private val config: ChatConfig) {
 
@@ -47,61 +46,48 @@ class BannedWordsFilter(private val config: ChatConfig) {
 
         private fun isSeparator(c: Char): Boolean = c.isWhitespace() || c in "_-.*+"
 
-        // Normalized text plus a map of each normalized char back to its original index range.
-        private class Norm(val text: String, val starts: IntArray, val ends: IntArray)
+        /**
+         * A maximal run of one normalized character, with the ORIGINAL index range it covers — so
+         * detection and censoring share one match set (bypassed words are censored in place).
+         */
+        private class Run(val ch: Char, val count: Int, val start: Int, val end: Int)
 
+        // Separators are dropped before runs are formed, so "a a a" is one run of three.
+        private fun runs(original: String, leet: Boolean): List<Run> {
+            val out = ArrayList<Run>()
+            for ((i, raw) in original.withIndex()) {
+                val c = raw.lowercaseChar()
+                if (isSeparator(c)) continue
+                val sub = if (leet) REPLACEMENTS[c] ?: c else c
+                val last = out.lastOrNull()
+                if (last != null && last.ch == sub) {
+                    out[out.size - 1] = Run(sub, last.count + 1, last.start, i + 1)
+                } else {
+                    out += Run(sub, 1, i, i + 1)
+                }
+            }
+            return out
+        }
+
+        /** Human-readable normalized form (runs of 3+ collapsed to one char); matching works on runs. */
         @JvmStatic
         @JvmOverloads
-        fun normalize(text: String, leet: Boolean = true): String = buildNormalized(text, leet).text
-
-        private fun buildNormalized(original: String, leet: Boolean): Norm {
-            val sb = StringBuilder()
-            val starts = ArrayList<Int>()
-            val ends = ArrayList<Int>()
-            var i = 0
-            val n = original.length
-            while (i < n) {
-                val c = original[i].lowercaseChar()
-                if (isSeparator(c)) {
-                    i++
-                    continue
-                }
-                // Take the maximal run of the same (case-insensitive) character.
-                var j = i
-                while (j < n && original[j].lowercaseChar() == c) j++
-                val runLen = j - i
-                val sub = if (leet) REPLACEMENTS[c] ?: c else c
-                if (runLen >= 3) {
-                    // Collapse a run of 3+ into one char that still spans the whole original run.
-                    sb.append(sub); starts.add(i); ends.add(j)
-                } else {
-                    for (k in 0 until runLen) {
-                        sb.append(sub); starts.add(i + k); ends.add(i + k + 1)
-                    }
-                }
-                i = j
-            }
-            return Norm(sb.toString(), starts.toIntArray(), ends.toIntArray())
-        }
+        fun normalize(text: String, leet: Boolean = true): String =
+            runs(text, leet).joinToString("") { r -> r.ch.toString().repeat(if (r.count >= 3) 1 else r.count) }
 
         @JvmStatic
         fun apply(message: String, bannedWords: List<String>, mode: Mode, action: Action, leet: Boolean): FilterResult {
-            val norm = buildNormalized(message, leet)
+            val textRuns = runs(message, leet)
             val spans = ArrayList<IntArray>() // [start, end) ranges in the ORIGINAL text
             var matched: String? = null
 
             for (raw in bannedWords) {
-                if (raw.startsWith("regex:")) {
-                    if (collectRegex(message, raw.substring(6), spans)) {
-                        matched = raw
-                        if (action == Action.BLOCK) return FilterResult(true, message, matched)
-                    }
-                    continue
-                }
-                val nw = normalize(raw, leet)
-                if (nw.isEmpty()) continue
                 val before = spans.size
-                collectWord(message, norm, nw, mode, spans)
+                when {
+                    raw.startsWith("regex:") -> collectRegex(message, raw.substring(6), spans)
+                    mode == Mode.EXACT -> collectExact(message, raw, leet, spans)
+                    else -> collectRuns(message, textRuns, runs(raw, leet), mode == Mode.SMART, spans)
+                }
                 if (spans.size > before) {
                     matched = raw
                     if (action == Action.BLOCK) return FilterResult(true, message, matched)
@@ -113,40 +99,57 @@ class BannedWordsFilter(private val config: ChatConfig) {
             return FilterResult(false, censor(message, spans), matched)
         }
 
-        private fun collectRegex(message: String, regex: String, spans: MutableList<IntArray>): Boolean {
-            return try {
+        private fun collectRegex(message: String, regex: String, spans: MutableList<IntArray>) {
+            try {
                 val m = Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(message)
-                var any = false
-                while (m.find()) {
-                    spans.add(intArrayOf(m.start(), m.end()))
-                    any = true
-                }
-                any
+                while (m.find()) spans.add(intArrayOf(m.start(), m.end()))
             } catch (e: PatternSyntaxException) {
-                false
+                // An admin typo in one regex must not break the whole filter; the entry just never matches.
             }
         }
 
-        private fun collectWord(message: String, norm: Norm, nw: String, mode: Mode, spans: MutableList<IntArray>) {
-            when (mode) {
-                Mode.EXACT -> if (norm.text == nw && norm.starts.isNotEmpty()) {
-                    spans.add(intArrayOf(norm.starts.first(), norm.ends.last()))
+        private fun collectRuns(
+            message: String, text: List<Run>, word: List<Run>, smart: Boolean, spans: MutableList<IntArray>,
+        ) {
+            if (word.isEmpty() || word.size > text.size) return
+            for (i in 0..text.size - word.size) {
+                // A text run may be LONGER than the word's ("fuuuck", "asss") but never shorter, so "as"
+                // doesn't match "ass". Comparing runs instead of chars is what closes the old bypass
+                // where doubling one letter ("fuuck") slipped past, since only 3+ repeats were collapsed.
+                val hit = word.indices.all { k -> text[i + k].ch == word[k].ch && text[i + k].count >= word[k].count }
+                if (!hit) continue
+                val start = text[i].start
+                val end = text[i + word.size - 1].end
+                // SMART adds a word-boundary check on the ORIGINAL text so "ass" doesn't match in "class".
+                if (!smart || isWordBoundary(message, start, end)) spans.add(intArrayOf(start, end))
+            }
+        }
+
+        // EXACT: the word as a standalone token, letter for letter (case and leet look-alikes aside) — no
+        // spacing or repeat tricks. It used to compare against the WHOLE message, so "you are bad" passed.
+        private fun collectExact(message: String, word: String, leet: Boolean, spans: MutableList<IntArray>) {
+            val target = canonical(word, leet)
+            if (target.isEmpty()) return
+            var i = 0
+            while (i < message.length) {
+                if (!isTokenChar(message[i])) {
+                    i++
+                    continue
                 }
-                Mode.CONTAINS, Mode.SMART -> {
-                    var from = 0
-                    while (true) {
-                        val idx = norm.text.indexOf(nw, from)
-                        if (idx < 0) break
-                        val origStart = norm.starts[idx]
-                        val origEnd = norm.ends[idx + nw.length - 1]
-                        // SMART adds a word-boundary check on the ORIGINAL text so that
-                        // "ass" does not match inside "class".
-                        if (mode == Mode.CONTAINS || isWordBoundary(message, origStart, origEnd)) {
-                            spans.add(intArrayOf(origStart, origEnd))
-                        }
-                        from = idx + 1
-                    }
-                }
+                var j = i
+                while (j < message.length && isTokenChar(message[j])) j++
+                if (canonical(message.substring(i, j), leet) == target) spans.add(intArrayOf(i, j))
+                i = j
+            }
+        }
+
+        // '@' and '$' count as word characters so "b@d" is one token, not "b" + "d".
+        private fun isTokenChar(c: Char): Boolean = c.isLetterOrDigit() || c == '@' || c == '$'
+
+        private fun canonical(text: String, leet: Boolean): String = buildString {
+            for (raw in text) {
+                val c = raw.lowercaseChar()
+                append(if (leet) REPLACEMENTS[c] ?: c else c)
             }
         }
 
