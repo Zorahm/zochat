@@ -34,7 +34,7 @@ Main entry point at `src/main/kotlin/zorahm/zochat/ZoChatPlugin.kt`. On enable:
 3. Preloads classes (`ClassPreloader`), then initializes: ChatConfig, Messages (ru/en), Database (SQLite/MySQL), repositories
 4. Creates services: BannedWordsFilter, MentionHandler, PapiHook, PlaceholderService, BubbleService, ChatService, PrivateMessageService, WelcomeMessages, AnnouncerService, CommandGuardConfig
 5. Registers commands: `/chat`, `/global` (`/g`), `/local` (`/l`), `/msg`, `/reply` (`/r`), `/chatlog`, `/bubble` (`/b`); schedules the daily chat-log retention purge
-6. Registers event listeners: ChatListener, PresenceListener, CommandGuardListener, SayListener
+6. Registers event listeners: ChatListener, PresenceListener, CommandGuardListener, SayListener, AdvancementListener
 7. Registers the `%zochat_...%` expansion — only when PlaceholderAPI is actually installed
 
 ### Package Layout
@@ -63,6 +63,9 @@ zorahm.zochat
 │   ├── PlaceholderConfig.kt          // loads placeholders.yml (builtin/custom ^ defs + world-names)
 │   ├── PapiHook.kt                   // the ONLY place that touches PlaceholderAPI classes
 │   └── ZoChatExpansion.kt            // our own %zochat_...% expansion (sync, no-DB values only)
+├── advancement/
+│   ├── AdvancementConfig.kt          // loads advancements.yml (toggle + format per frame task/goal/challenge)
+│   └── AdvancementListener.kt        // PlayerAdvancementDoneEvent -> replaces event.message() with our format
 ├── announcer/
 │   ├── AnnouncerConfig.kt            // loads announcer.yml (announcers + announcements-by-ID)
 │   ├── AnnouncerService.kt           // one repeating main-thread task per announcer (staggered), per-player send with per-line parse cache
@@ -129,6 +132,7 @@ SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All
 - `announcer.yml`: Timed chat broadcasts (announcers + announcements-by-ID)
 - `bubble.yml`: Floating bubble chat (TextDisplay) settings
 - `commands.yml`: Console-only command list for the command guard
+- `advancements.yml`: Advancement announcement formats, one per frame (task/goal/challenge); `""` hides that type
 - `plugin.yml`: Plugin metadata, command definitions, permissions. Descriptions here surface in the vanilla `/help` for every player — keep them **English**, unlike the localized `messages_*.yml`
 
 ## Important Implementation Details
@@ -149,6 +153,10 @@ LuckPerms prefix/suffix meta may contain **legacy color codes** (`&c`, `§c`, `&
 - `PrefixFormatter.format(meta)` — legacy → standalone `Component` (closed), when you just need the rendered prefix/suffix on its own.
 
 Never pass raw LuckPerms strings to `miniMessage.deserialize()` directly, or legacy codes render as raw characters (issue #3).
+
+### Advancement Messages (AdvancementListener.kt)
+
+Vanilla announces an advancement with translatable components (`chat.type.advancement.*`, the advancement's title and description keys) that each **client** resolves in its own language; the description hover lives on the advancement name component. So the listener never flattens anything to a string: it inserts Paper's `Advancement.displayName()` (the vanilla `[Title]` with hover) and the player name as inserted-component tags (`{advancement}`/`{player}` → `Placeholder.component`, as in `ChatService.render`), which also makes them usable as `<lang:chat.type.advancement.task:'{player}':'{advancement}'>` arguments. It replaces `event.message(...)` instead of cancelling and broadcasting, so vanilla keeps delivery (all players + console) and `event.message() == null` (hidden advancements, recipes, the `announceAdvancements` gamerule) stays silent.
 
 ### Anti-Spam System
 
@@ -182,7 +190,7 @@ JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extend
 
 Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching), PlaceholderMatchTest (`buildPattern` longest-first matching), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced decisions), ChatServiceTest (gradient-safe render, local recipients, mention scope), MentionPatternTest, ItemPlaceholderTest, ChatLogCommandTest (escaping), SayListenerTest (permission gate), DatabaseTest (MySQL DDL/URL).
 
-Also: PapiHookTest (`expandTokens` escaping/colours), PlayerTextTest (backslash-safe escaping), RepositoryTest (both repositories against a real SQLite file — `sqlite-jdbc` is `testImplementation` only; Paper ships it at runtime).
+Also: AdvancementListenerTest (hover/translation survive `<lang>` and gradients; shipped `advancements.yml` defaults parse), PapiHookTest (`expandTokens` escaping/colours), PlayerTextTest (backslash-safe escaping), RepositoryTest (both repositories against a real SQLite file — `sqlite-jdbc` is `testImplementation` only; Paper ships it at runtime).
 
 There is no mocking library: `src/test/kotlin/zorahm/zochat/Fakes.kt` builds `Player`/`World`/`Plugin` stand-ins as JDK dynamic proxies, plus `Fakes.leaves()` to inspect a Component's effective per-leaf style.
 

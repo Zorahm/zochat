@@ -30,6 +30,8 @@ A Paper plugin that adds local/global chat, private messaging, player mentions, 
   - Timed broadcasts on independent timers, sequential or random rotation, configured in `announcer.yml`.
 - **Bubble chat**
   - Floating `TextDisplay` above the player's head on chat and/or `/bubble`, configured in `bubble.yml`.
+- **Advancement messages**
+  - Custom formats per advancement type (task / goal / challenge) in `advancements.yml`. The advancement keeps the vanilla hover with its description, and titles — optionally the whole phrase via `<lang:...>` — are shown in each player's own client language.
 - **Command guard**
   - Blocks console-only commands (`/op`, `/stop`, `/seed`, …) for players, including `minecraft:`-namespaced bypasses, configured in `commands.yml`.
 - **`/say` formatting**
@@ -105,6 +107,7 @@ A Paper plugin that adds local/global chat, private messaging, player mentions, 
 | `announcer.yml` | Announcers and announcement bodies |
 | `bubble.yml` | Bubble chat (TextDisplay) settings |
 | `commands.yml` | Console-only command list for the command guard |
+| `advancements.yml` | Advancement announcement formats (task / goal / challenge) |
 | `messages/messages_ru.yml`, `messages/messages_en.yml` | Player-facing strings; language selected by `message:` in `config.yml` |
 | `welcome_messages/welcome_messages.yml` | Welcome messages shown on join |
 
