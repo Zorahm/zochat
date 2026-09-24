@@ -116,6 +116,7 @@ class ZoChatPlugin : JavaPlugin() {
         )
         Bukkit.getPluginManager().registerEvents(CommandGuardListener(this, guardConfig, messages), this)
         Bukkit.getPluginManager().registerEvents(SayListener(config, papi), this)
+        Bukkit.getPluginManager().registerEvents(bubbleService, this)
         val advancements = AdvancementConfig(this)
         advancementConfig = advancements
         Bukkit.getPluginManager().registerEvents(AdvancementListener(advancements, config, papi), this)

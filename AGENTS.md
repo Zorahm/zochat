@@ -34,7 +34,7 @@ Main entry point at `src/main/kotlin/zorahm/zochat/ZoChatPlugin.kt`. On enable:
 3. Preloads classes (`ClassPreloader`), then initializes: ChatConfig, Messages (ru/en), Database (SQLite/MySQL), repositories
 4. Creates services: BannedWordsFilter, MentionHandler, PapiHook, PlaceholderService, BubbleService, ChatService, PrivateMessageService, WelcomeMessages, AnnouncerService, CommandGuardConfig
 5. Registers commands: `/chat`, `/global` (`/g`), `/local` (`/l`), `/msg`, `/reply` (`/r`), `/chatlog`, `/bubble` (`/b`); schedules the daily chat-log retention purge
-6. Registers event listeners: ChatListener, PresenceListener, CommandGuardListener, SayListener, AdvancementListener
+6. Registers event listeners: ChatListener, PresenceListener, CommandGuardListener, SayListener, AdvancementListener, BubbleService
 7. Registers the `%zochat_...%` expansion — only when PlaceholderAPI is actually installed
 
 ### Package Layout
@@ -73,7 +73,7 @@ zorahm.zochat
 │   └── SelectionType.kt              // SEQUENTIAL | RANDOM (fallback SEQUENTIAL)
 ├── bubble/
 │   ├── BubbleConfig.kt               // loads bubble.yml (core TextDisplay settings)
-│   ├── BubbleService.kt              // TextDisplay above head; 1-tick task follows + expires it; skips spectator/invisible/vanished senders
+│   ├── BubbleService.kt              // TextDisplay riding the player as a passenger (client-smooth); 1-tick task expires/re-seats it, removed before cross-world teleports; skips spectator/invisible/vanished senders
 │   ├── BubbleCommand.kt              // /bubble (/b) <text>
 │   └── TriggerType.kt                // CHAT | COMMAND | CHAT_COMMAND (fallback CHAT)
 ├── guard/

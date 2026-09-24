@@ -32,8 +32,9 @@ text-shadow: false
 # Pixel width before the text wraps to a new line (100 ≈ 16 characters).
 line-width: 200
 
-# Extra height above the player's head, in blocks.
-head-distance: 0.5
+# Height above the top of the player's head, in blocks. The bubble rides the player as a passenger,
+# so it follows every movement smoothly (and dips a little when the player sneaks).
+head-distance: 0.3
 
 # Text size multiplier.
 scale: 1.0

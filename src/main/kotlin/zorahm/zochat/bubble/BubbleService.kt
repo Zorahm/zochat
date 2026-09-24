@@ -10,6 +10,11 @@ import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.entity.TextDisplay
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.plugin.Plugin
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitTask
@@ -20,20 +25,22 @@ import zorahm.zochat.chat.PapiHook
 import java.util.UUID
 
 /**
- * Floating chat bubbles (TextDisplay above the head). A single repeating main-thread task keeps each
- * active bubble glued to its player and removes it when it expires or the player leaves. Bubbles are
- * non-mounted and repositioned per tick, which sidesteps version-specific passenger-offset quirks.
+ * Floating chat bubbles (TextDisplay above the head). The display RIDES the player as a passenger, so the
+ * client moves it together with the player model: smooth, no lag behind the head. It used to be a free
+ * entity teleported to the head every tick, which the client could only chase in visible jumps.
+ * A repeating main-thread task expires bubbles and re-seats one that got knocked off (teleports eject
+ * passengers); if another plugin forbids the mount, the bubble falls back to per-tick teleports.
  */
 class BubbleService(
     private val plugin: Plugin,
     private val config: BubbleConfig,
     private val papi: PapiHook,
-) {
+) : Listener {
     private val mm = MiniMessage.miniMessage()
     private val active = HashMap<UUID, Bubble>()
     private var task: BukkitTask? = null
 
-    private class Bubble(val display: TextDisplay, val expiresAtMillis: Long)
+    private class Bubble(val display: TextDisplay, val expiresAtMillis: Long, var mounted: Boolean)
 
     fun start() {
         if (task != null) return
@@ -67,7 +74,7 @@ class BubbleService(
         if (!passesRequirements(player, plainMessage)) return
         clear(player.uniqueId) // no queue/swapper: a new message replaces the current bubble
 
-        val display = player.world.spawn(bubbleLocation(player), TextDisplay::class.java) { d ->
+        val display = player.world.spawn(anchor(player), TextDisplay::class.java) { d ->
             d.isPersistent = false
             d.text(render(player, message))
             d.billboard = config.billboard
@@ -75,12 +82,15 @@ class BubbleService(
             d.isShadowed = config.textShadow
             d.lineWidth = config.lineWidth
             d.backgroundColor = backgroundColor()
-            // Without this (default 0) the client SNAPS to each per-tick teleport from tick(), so
-            // the bubble visibly stutters while the player walks; 2 ticks of client-side
-            // interpolation makes it glide (at the cost of trailing ~100 ms behind the head).
+            // Only matters in the teleport fallback (mount refused): smooths the per-tick teleports a bit.
             d.teleportDuration = 2
+            // The height above the head is a translation, not a position: a passenger always sits exactly
+            // on the vehicle's attachment point (top of the head, lower while sneaking).
             d.transformation = Transformation(
-                Vector3f(), AxisAngle4f(), Vector3f(config.scale, config.scale, config.scale), AxisAngle4f()
+                Vector3f(0f, config.headDistance.toFloat(), 0f),
+                AxisAngle4f(),
+                Vector3f(config.scale, config.scale, config.scale),
+                AxisAngle4f(),
             )
         }
         // see-own-bubble=false: hide it from the sender only; everyone else still sees it.
@@ -93,7 +103,8 @@ class BubbleService(
 
         val symbols = plainMessage.length
         val seconds = maxOf(config.minimumTime, symbols * config.timePerSymbol)
-        active[player.uniqueId] = Bubble(display, System.currentTimeMillis() + (seconds * 1000).toLong())
+        val mounted = player.addPassenger(display)
+        active[player.uniqueId] = Bubble(display, System.currentTimeMillis() + (seconds * 1000).toLong(), mounted)
     }
 
     private fun tick() {
@@ -102,18 +113,47 @@ class BubbleService(
         while (iterator.hasNext()) {
             val (uuid, bubble) = iterator.next()
             val player = Bukkit.getPlayer(uuid)
-            if (player == null || !player.isOnline || now >= bubble.expiresAtMillis) {
-                bubble.display.remove()
+            val display = bubble.display
+            if (player == null || !player.isOnline || player.isDead || now >= bubble.expiresAtMillis ||
+                !display.isValid || display.world != player.world
+            ) {
+                display.remove()
                 iterator.remove()
                 continue
             }
-            val target = bubbleLocation(player)
-            val current = bubble.display.location
-            // Standing still: skip the redundant teleport packet. The world check also guards
-            // distanceSquared, which throws on cross-world locations.
-            if (current.world === target.world && current.distanceSquared(target) < 1.0e-6) continue
-            bubble.display.teleport(target)
+            if (bubble.mounted) {
+                if (display.vehicle == player) continue
+                // Knocked off by a same-world teleport (Paper ejects passengers): walk it over and re-seat.
+                display.leaveVehicle()
+                display.teleport(anchor(player))
+                bubble.mounted = player.addPassenger(display)
+                continue
+            }
+            follow(player, display)
         }
+    }
+
+    // Fallback when the mount was refused (another plugin cancelled EntityMountEvent): the old per-tick
+    // teleport, which works everywhere but visibly trails the player.
+    private fun follow(player: Player, display: TextDisplay) {
+        val target = anchor(player)
+        val current = display.location
+        // Standing still: skip the redundant teleport packet. The world check also guards
+        // distanceSquared, which throws on cross-world locations.
+        if (current.world === target.world && current.distanceSquared(target) < 1.0e-6) return
+        display.teleport(target)
+    }
+
+    // Leaving the world with a passenger can make the server carry over a COPY of the display that we hold
+    // no reference to — it would ride the player forever. Drop the bubble before the jump instead.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onTeleport(event: PlayerTeleportEvent) {
+        if (event.to.world != event.from.world) clear(event.player.uniqueId)
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        clear(event.player.uniqueId)
     }
 
     fun clear(player: UUID) {
@@ -141,8 +181,8 @@ class BubbleService(
             player.hasPotionEffect(PotionEffectType.INVISIBILITY) ||
             player.getMetadata("vanished").any { it.asBoolean() }
 
-    private fun bubbleLocation(player: Player): Location =
-        player.eyeLocation.clone().add(0.0, config.headDistance, 0.0)
+    // Where a passenger sits: top of the player's bounding box. head-distance is added by the translation.
+    private fun anchor(player: Player): Location = player.location.add(0.0, player.height, 0.0)
 
     private fun backgroundColor(): Color {
         val c = config.backgroundColor

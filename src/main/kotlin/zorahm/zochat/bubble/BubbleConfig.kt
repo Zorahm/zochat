@@ -17,7 +17,7 @@ class BubbleConfig(private val plugin: Plugin) {
     var seeThrough: Boolean = false; private set
     var textShadow: Boolean = false; private set
     var lineWidth: Int = 200; private set
-    var headDistance: Double = 0.5; private set
+    var headDistance: Double = 0.3; private set
     var scale: Float = 1.0f; private set
 
     var backgroundColor: Color = Color.BLACK; private set
@@ -50,7 +50,7 @@ class BubbleConfig(private val plugin: Plugin) {
         seeThrough = cfg.getBoolean("see-through", false)
         textShadow = cfg.getBoolean("text-shadow", false)
         lineWidth = cfg.getInt("line-width", 200)
-        headDistance = cfg.getDouble("head-distance", 0.5)
+        headDistance = cfg.getDouble("head-distance", 0.3)
         scale = cfg.getDouble("scale", 1.0).toFloat()
 
         backgroundColor = parseColor(cfg.getString("background.color"))
