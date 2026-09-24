@@ -78,7 +78,7 @@ zorahm.zochat
 │   ├── CommandGuard.kt               // pure blocked/allowed decision incl. namespace forms (unit-tested)
 │   └── CommandGuardListener.kt       // cancels blocked commands + hides them from tab completion
 ├── say/
-│   └── SayListener.kt                // reformats vanilla /say (player + console) like chat
+│   └── SayListener.kt                // reformats vanilla /say (player + console) like chat; players need minecraft.command.say
 ├── privatemsg/
 │   ├── PrivateMessageService.kt      // /msg + /reply core, offline hand-off
 │   ├── MsgCommand.java
@@ -104,12 +104,12 @@ All chat messages (natural chat, /g, /l) go through a single `ChatService.send(p
 1. Banned words filter (block or replace mode) — before the cooldown so a rejected message doesn't burn it
 2. Anti-spam cooldown check (per-channel via `CooldownService`; bypass permission: `zochat.spam.bypass`)
 3. The player's text is **escaped once** (`miniMessage.escapeTags`) — player-typed `<...>` is never parsed as MiniMessage (no colour/`<click:run_command>` injection). Everything below works on that escaped string; there is no Component→serialize→deserialize round-trip
-4. Mention processing (`@player`, `@everyone`, `@here`) + notifications — runs **before** placeholder expansion so an `@` inside an expanded value (PAPI, anvil-renamed item in `^item`) can never trigger a mention
+4. Mention processing (`@player`, `@everyone`, `@here`) — runs **before** placeholder expansion so an `@` inside an expanded value (PAPI, anvil-renamed item in `^item`) can never trigger a mention
 5. Placeholder processing (`^loc`, `^health`, etc.) via `PlaceholderService.processEscaped` (input already escaped; only trusted config formats carry tags)
 6. Chat log to DB (async)
 7. LuckPerms prefix/suffix via `PrefixFormatter.toMiniMessage()`, **inlined** into the format string (not inserted as closed components) so an unclosed colour/gradient in a suffix flows into `{player}`/`{message}`
-8. Build final Component: `{player}`/`{message}` stay components (player input was already escaped in step 3, so it never renders as MiniMessage) but inherit the open colour from the inlined prefix/suffix
-9. Route: LOCAL = players in radius (squared distance), GLOBAL = `Bukkit.broadcast()`
+8. Build final Component (`ChatService.render`): `{player}`/`{message}` become `<zochat_player>`/`<zochat_message>` inserted-component tags (`Placeholder.component`), NOT `replaceText()` targets — an unclosed `<gradient>` from the prefix/suffix splits a literal `{player}` into per-character components that `replaceText` can't match. They stay components (player input was already escaped in step 3) and inherit the open colour/gradient
+9. Route: LOCAL = players in radius (squared distance, same world — `localRecipients`), GLOBAL = `Bukkit.broadcast()`. Mention notifications go only to mentioned players who are recipients (`onlyRecipients`), so local `@player`/`@everyone` never pings someone out of range
 
 ### Database
 
@@ -117,7 +117,7 @@ Single `Database` class with async writes via a single-thread executor (`zoChat-
 - **ChatLogRepository**: `chat_logs(id, player_uuid TEXT, message TEXT, timestamp)`
 - **OfflineMessageRepository**: `offline_messages(id, sender_uuid, receiver_uuid, message, timestamp)`
 
-SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All DB I/O is async — reads deliver results back to main thread via `Bukkit.getScheduler().runTask()`. `conn()` revalidates MySQL connections with `isValid()` and reopens dead ones (a connection killed by `wait_timeout` still reports `isClosed() == false`); the JDBC URL deliberately has no `autoReconnect=true`.
+SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All DB I/O is async — reads deliver results back to main thread via `Bukkit.getScheduler().runTask()`. `conn()` revalidates MySQL connections with `isValid()` and reopens dead ones (a connection killed by `wait_timeout` still reports `isClosed() == false`); the JDBC URL deliberately has no `autoReconnect=true` but has `allowPublicKeyRetrieval=true` (MySQL 8 auth over non-SSL). DDL is dialect-aware: use `db.idColumn()` for the auto-increment key — `AUTOINCREMENT` is SQLite-only and fails `CREATE TABLE` on MySQL.
 
 ## Configuration Files
 
@@ -139,7 +139,7 @@ All chat formats use MiniMessage syntax:
 - Gradients: `<gradient:#55ff55:#aaffaa>text</gradient>`
 - Placeholders in formats: `{prefix}`, `{suffix}`, `{player}`, `{message}`
 
-Components are built using `Component.replaceText()` to substitute placeholders.
+Player-controlled text spliced into a format string (chat, `/chatlog` lines, `^item` names) must be `escapeTags`-ed first. `{player}`/`{message}` in chat formats are resolved as inserted-component tags (see Chat Flow step 8), not with `replaceText()`.
 
 ### LuckPerms Integration
 
@@ -158,6 +158,7 @@ Never pass raw LuckPerms strings to `miniMessage.deserialize()` directly, or leg
 - `@PlayerName` — partial name matching, max 5 per message
 - `@everyone` (aliases: `@все`, `@all`) — requires `zochat.mention.everyone`
 - `@here` (aliases: `@здесь`) — players within `here-radius`, requires `zochat.mention.here`
+- Both patterns end with a `(?![\p{L}\p{N}_])` lookahead so `@Allen` is not `@all`; highlighting uses `Matcher.quoteReplacement` on the config format
 
 ### Placeholder System (PlaceholderService.java + PlaceholderConfig.kt)
 
@@ -177,7 +178,9 @@ JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extend
 ./gradlew test
 ```
 
-Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching), PlaceholderMatchTest (`buildPattern` longest-first matching), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced decisions).
+Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching), PlaceholderMatchTest (`buildPattern` longest-first matching), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced decisions), ChatServiceTest (gradient-safe render, local recipients, mention scope), MentionPatternTest, ItemPlaceholderTest, ChatLogCommandTest (escaping), SayListenerTest (permission gate), DatabaseTest (MySQL DDL/URL).
+
+There is no mocking library: `src/test/kotlin/zorahm/zochat/Fakes.kt` builds `Player`/`World` stand-ins as JDK dynamic proxies, plus `Fakes.leaves()` to inspect a Component's effective per-leaf style.
 
 ## CI
 
