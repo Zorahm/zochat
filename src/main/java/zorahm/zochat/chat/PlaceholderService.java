@@ -125,6 +125,15 @@ public class PlaceholderService {
         return def.getFormat().replace("{value}", value);
     }
 
+    // Package-private + static so the escaping is unit-testable without a live server. The name is
+    // player-controlled (anvil rename), so it's escaped before splicing into the trusted format —
+    // otherwise an item named "<click:run_command:'/op me'>Sword" becomes a live click in ^item.
+    static String formatItem(String format, String itemName, int amount) {
+        return format
+                .replace("{item}", MiniMessage.miniMessage().escapeTags(itemName))
+                .replace("{amount}", String.valueOf(amount));
+    }
+
     private String builtin(Player player, PlaceholderDef def) {
         String format = def.getFormat();
         switch (def.getName()) {
@@ -178,9 +187,7 @@ public class PlaceholderService {
                 String itemName = (meta != null && meta.hasDisplayName())
                         ? plainText.serialize(meta.displayName())
                         : item.getType().name().toLowerCase().replace("_", " ");
-                return format
-                        .replace("{item}", itemName)
-                        .replace("{amount}", String.valueOf(item.getAmount()));
+                return formatItem(format, itemName, item.getAmount());
 
             default:
                 // A built-in entry whose name isn't one we know how to resolve — leave it literal.

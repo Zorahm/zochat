@@ -1,5 +1,6 @@
 package zorahm.zochat.command
 
+import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
 import org.bukkit.command.Command
@@ -16,8 +17,6 @@ class ChatLogCommand(
     private val messages: Messages
 ) : CommandExecutor {
 
-    private val mm = MiniMessage.miniMessage()
-
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
         if (args.isEmpty()) {
             sender.sendMessage(messages.component("chatlog.usage"))
@@ -31,7 +30,7 @@ class ChatLogCommand(
             }
             chatLog.clearAll { count ->
                 Bukkit.getScheduler().runTask(plugin, Runnable {
-                    sender.sendMessage(mm.deserialize(messages.get("chatlog.cleared").replace("{count}", count.toString())))
+                    sender.sendMessage(MM.deserialize(messages.get("chatlog.cleared").replace("{count}", count.toString())))
                 })
             }
             return true
@@ -49,16 +48,29 @@ class ChatLogCommand(
         chatLog.recentFor(playerUUID) { list ->
             Bukkit.getScheduler().runTask(plugin, Runnable {
                 val name = Bukkit.getOfflinePlayer(playerUUID).name ?: playerName
-                sender.sendMessage(mm.deserialize(messages.get("chatlog.header").replace("{player}", name)))
+                sender.sendMessage(MM.deserialize(messages.get("chatlog.header").replace("{player}", name)))
                 if (list.isEmpty()) {
                     sender.sendMessage(messages.component("chatlog.no-messages"))
                 } else {
                     list.forEach { msg ->
-                        sender.sendMessage(mm.deserialize(messages.get("chatlog.message").replace("{message}", msg)))
+                        sender.sendMessage(renderLine(messages.get("chatlog.message"), msg))
                     }
                 }
             })
         }
         return true
+    }
+
+    companion object {
+        private val MM = MiniMessage.miniMessage()
+
+        /**
+         * One log line. The stored message is the player's raw text, so it's escaped before splicing:
+         * otherwise a logged `<click:run_command:...>` renders for the admin reading the log and runs
+         * as them on click — an injection aimed squarely at the people with the most permissions.
+         */
+        @JvmStatic
+        fun renderLine(template: String, message: String): Component =
+            MM.deserialize(template.replace("{message}", MM.escapeTags(message)))
     }
 }

@@ -9,6 +9,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.server.ServerCommandEvent
+import org.bukkit.permissions.Permissible
 import zorahm.zochat.chat.PapiHook
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.guard.CommandGuard
@@ -30,7 +31,7 @@ class SayListener(
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerSay(event: PlayerCommandPreprocessEvent) {
         if (!config.isSayFormattingEnabled) return
-        val message = sayArgument(event.message) ?: return
+        val message = playerSayText(event.player, event.message) ?: return
         event.isCancelled = true
         broadcastFromPlayer(event.player, message)
     }
@@ -43,14 +44,6 @@ class SayListener(
         val message = sayArgument(event.command) ?: return
         event.isCancelled = true
         broadcastFromConsole(message)
-    }
-
-    /** Message part of a "/say ..." line, or null if this isn't /say or carries no text. */
-    private fun sayArgument(rawLine: String): String? {
-        // Reuse the guard's name normalization so "/minecraft:say" is treated like "/say".
-        if (CommandGuard.normalize(rawLine, stripNamespace = true) != "say") return null
-        val arg = rawLine.trim().substringAfter(' ', "").trim()
-        return arg.ifEmpty { null } // no text -> let vanilla show its own usage error
     }
 
     private fun broadcastFromPlayer(sender: Player, rawMessage: String) {
@@ -82,5 +75,29 @@ class SayListener(
             .replace("{player}", name)
             .replace("{message}", message)
         return mm.deserialize(spliced)
+    }
+
+    companion object {
+        // Vanilla's own node for /say. We cancel the command and broadcast ourselves, so vanilla's
+        // permission check never runs — without this gate any player could broadcast server-wide.
+        const val SAY_PERMISSION = "minecraft.command.say"
+
+        /** Message part of a "/say ..." line, or null if this isn't /say or carries no text. */
+        private fun sayArgument(rawLine: String): String? {
+            // Reuse the guard's name normalization so "/minecraft:say" is treated like "/say".
+            if (CommandGuard.normalize(rawLine, stripNamespace = true) != "say") return null
+            val arg = rawLine.trim().substringAfter(' ', "").trim()
+            return arg.ifEmpty { null } // no text -> let vanilla show its own usage error
+        }
+
+        /**
+         * Text to broadcast for a player's "/say ..." line, or null to leave the command to vanilla —
+         * including when the player lacks [SAY_PERMISSION], so vanilla rejects it with its usual error.
+         */
+        @JvmStatic
+        fun playerSayText(player: Permissible, rawLine: String): String? {
+            val text = sayArgument(rawLine) ?: return null
+            return if (player.hasPermission(SAY_PERMISSION)) text else null
+        }
     }
 }
