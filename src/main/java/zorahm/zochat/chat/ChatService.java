@@ -4,6 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.model.user.User;
 import org.bukkit.Bukkit;
@@ -16,6 +18,11 @@ import zorahm.zochat.storage.ChatLogRepository;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public final class ChatService {
@@ -30,7 +37,7 @@ public final class ChatService {
     private final CooldownService cooldowns;
     private final BubbleService bubble;
 
-    private final MiniMessage mm = MiniMessage.miniMessage();
+    private static final MiniMessage mm = MiniMessage.miniMessage();
     private final DateTimeFormatter time = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
     public ChatService(ChatConfig config, Messages messages, LuckPerms luckPerms,
@@ -97,7 +104,12 @@ public final class ChatService {
         } else if (mentionResult.hasHereMention()) {
             mentionType = MentionHandler.MentionType.HERE;
         }
-        mentions.notifyMentionedPlayers(mentionResult.getMentionedPlayers(), mentionType);
+        Collection<? extends Player> recipients = (channel == ChatChannel.LOCAL)
+                ? localRecipients(sender, Bukkit.getOnlinePlayers(), config.getLocalChatRadius())
+                : Bukkit.getOnlinePlayers();
+        // Only ping players who actually receive the message: in local chat a mention (or @everyone)
+        // used to sound for players out of range or in other worlds who could never read it.
+        mentions.notifyMentionedPlayers(onlyRecipients(mentionResult.getMentionedPlayers(), recipients), mentionType);
 
         chatLog.log(sender.getUniqueId(), message);
 
@@ -134,14 +146,12 @@ public final class ChatService {
                 .hoverEvent(HoverEvent.showText(mm.deserialize(
                         messages.get("chat.message-timestamp").replace("{time}", timestamp))));
 
-        // {player}/{message} stay components so player input is never parsed as MiniMessage,
-        // yet they still inherit any open colour from the inlined prefix/suffix.
-        Component finalMessage = mm.deserialize(inlined)
-                .replaceText(b -> b.matchLiteral("{player}").replacement(playerNameComponent))
-                .replaceText(b -> b.matchLiteral("{message}").replacement(messageComponent));
+        Component finalMessage = render(inlined, playerNameComponent, messageComponent);
 
         if (channel == ChatChannel.LOCAL) {
-            deliverLocal(sender, finalMessage);
+            for (Player r : recipients) {
+                r.sendMessage(finalMessage);
+            }
         } else {
             Bukkit.getServer().broadcast(finalMessage);
         }
@@ -151,13 +161,42 @@ public final class ChatService {
         bubble.onChat(sender, message);
     }
 
-    private void deliverLocal(Player sender, Component message) {
-        int radius = config.getLocalChatRadius();
-        for (Player r : Bukkit.getOnlinePlayers()) {
+    // {player}/{message} become inserted-component tags rather than replaceText() targets: an unclosed
+    // <gradient> from the prefix/suffix splits the literal "{player}" into one component per character,
+    // so replaceText never found it and the raw token was shown. As tags they're still components (player
+    // input is never parsed as MiniMessage) and still inherit the open colour/gradient around them.
+    // Package-private + static so it's unit-testable without a live server.
+    static Component render(String format, Component player, Component message) {
+        String tagged = format
+                .replace("{player}", "<zochat_player>")
+                .replace("{message}", "<zochat_message>");
+        return mm.deserialize(tagged, TagResolver.resolver(
+                Placeholder.component("zochat_player", player),
+                Placeholder.component("zochat_message", message)));
+    }
+
+    static List<Player> localRecipients(Player sender, Collection<? extends Player> online, int radius) {
+        double radiusSq = (double) radius * radius;
+        List<Player> out = new ArrayList<>();
+        for (Player r : online) {
+            // Same-world check first: distanceSquared throws across worlds.
             if (r.getWorld().equals(sender.getWorld())
-                    && r.getLocation().distanceSquared(sender.getLocation()) <= (double) radius * radius) {
-                r.sendMessage(message);
+                    && r.getLocation().distanceSquared(sender.getLocation()) <= radiusSq) {
+                out.add(r);
             }
         }
+        return out;
+    }
+
+    static List<Player> onlyRecipients(List<Player> mentioned, Collection<? extends Player> recipients) {
+        // Hash once: @everyone mentions every online player, so a linear contains() per mention is O(n²).
+        Set<Player> heard = new HashSet<>(recipients);
+        List<Player> out = new ArrayList<>(mentioned.size());
+        for (Player p : mentioned) {
+            if (heard.contains(p)) {
+                out.add(p);
+            }
+        }
+        return out;
     }
 }

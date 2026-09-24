@@ -23,8 +23,13 @@ public class MentionHandler {
 
     // UNICODE_CHARACTER_CLASS so \w matches non-ASCII names too (e.g. Cyrillic @Ник), not just [a-zA-Z0-9_].
     private static final Pattern MENTION_PATTERN = Pattern.compile("@(\\w+)", Pattern.UNICODE_CHARACTER_CLASS);
-    private static final Pattern EVERYONE_PATTERN = Pattern.compile("@(everyone|все|all)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern HERE_PATTERN = Pattern.compile("@(here|здесь)", Pattern.CASE_INSENSITIVE);
+    // The trailing lookahead stops "@all" from matching inside "@Allen" or "x@allmail.com" (which turned
+    // them into @everyone). UNICODE_CASE so "@Все"/"@ЗДЕСЬ" match too — CASE_INSENSITIVE is ASCII-only.
+    // Package-private for tests.
+    static final Pattern EVERYONE_PATTERN = Pattern.compile(
+            "@(everyone|все|all)(?![\\p{L}\\p{N}_])", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    static final Pattern HERE_PATTERN = Pattern.compile(
+            "@(here|здесь)(?![\\p{L}\\p{N}_])", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private static final int MAX_MENTIONS_PER_MESSAGE = 5;
 
@@ -75,7 +80,7 @@ public class MentionHandler {
             if (sender.hasPermission(chatConfig.getMentionEveryonePermission())) {
                 hasEveryoneMention = true;
                 String everyoneFormat = chatConfig.getMentionEveryoneFormat();
-                processedMessage = everyoneMatcher.replaceAll(everyoneFormat);
+                processedMessage = highlight(EVERYONE_PATTERN, processedMessage, everyoneFormat);
                 mentionedPlayers.addAll(Bukkit.getOnlinePlayers().stream()
                         .filter(p -> !p.equals(sender))
                         .collect(Collectors.toList()));
@@ -89,7 +94,7 @@ public class MentionHandler {
             if (sender.hasPermission(chatConfig.getMentionHerePermission())) {
                 hasHereMention = true;
                 String hereFormat = chatConfig.getMentionHereFormat();
-                processedMessage = hereMatcher.replaceAll(hereFormat);
+                processedMessage = highlight(HERE_PATTERN, processedMessage, hereFormat);
 
                 int radius = chatConfig.getMentionHereRadius();
                 Location senderLoc = sender.getLocation();
@@ -134,6 +139,12 @@ public class MentionHandler {
 
         return new MentionResult(processedMessage, new ArrayList<>(mentionedPlayers),
                 hasEveryoneMention, hasHereMention);
+    }
+
+    // quoteReplacement: the format comes from config, and a raw replaceAll treats '$' and '\' in it as
+    // group references — a "$" in the format threw or mangled the message.
+    static String highlight(Pattern pattern, String message, String format) {
+        return pattern.matcher(message).replaceAll(Matcher.quoteReplacement(format));
     }
 
     private Player findPlayer(String name) {
