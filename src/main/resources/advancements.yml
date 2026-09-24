@@ -1,0 +1,24 @@
+# ════════════════════════════════════════════
+#            zoChat Advancements
+# ════════════════════════════════════════════
+#
+# Restyles the chat line announced when a player completes an advancement.
+# Only advancements vanilla would announce are touched (hidden ones, recipes and
+# gamerule announceAdvancements=false stay silent as usual).
+
+# Master toggle. false = vanilla advancement messages are left untouched.
+enabled: true
+
+# One MiniMessage format per advancement type. Tokens:
+#   {player}      — the player's name
+#   {advancement} — the vanilla "[Title]": coloured by type, with the description on hover,
+#                   translated by each player's client into their own language
+# <lang:chat.type.advancement.task:'...':'...'> keeps the whole phrase in the reader's language
+# too ("has made the advancement" / "получил достижение"). Plain text works as well, e.g.
+#   task: "<gray>{player} получил достижение</gray> {advancement}"
+# PlaceholderAPI (%...%) is resolved per player when placeholder-api.format is on in config.yml.
+# An empty format ("") hides the announcement for that type.
+formats:
+  task: "<gray>✦ <lang:chat.type.advancement.task:'<white>{player}</white>':'{advancement}'>"
+  goal: "<gray>✦ <lang:chat.type.advancement.goal:'<white>{player}</white>':'{advancement}'>"
+  challenge: "<light_purple>✦</light_purple> <gray><lang:chat.type.advancement.challenge:'<white>{player}</white>':'{advancement}'>"

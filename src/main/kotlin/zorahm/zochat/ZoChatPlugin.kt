@@ -9,6 +9,8 @@ import org.bukkit.Bukkit
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.TabCompleter
 import org.bukkit.plugin.java.JavaPlugin
+import zorahm.zochat.advancement.AdvancementConfig
+import zorahm.zochat.advancement.AdvancementListener
 import zorahm.zochat.announcer.AnnouncerConfig
 import zorahm.zochat.announcer.AnnouncerService
 import zorahm.zochat.bubble.BubbleCommand
@@ -54,6 +56,7 @@ class ZoChatPlugin : JavaPlugin() {
     private var announcer: AnnouncerService? = null
     private var bubble: BubbleService? = null
     private var guardConfig: CommandGuardConfig? = null
+    private var advancementConfig: AdvancementConfig? = null
 
     override fun onEnable() {
         displayBanner()
@@ -113,6 +116,9 @@ class ZoChatPlugin : JavaPlugin() {
         )
         Bukkit.getPluginManager().registerEvents(CommandGuardListener(this, guardConfig, messages), this)
         Bukkit.getPluginManager().registerEvents(SayListener(config, papi), this)
+        val advancements = AdvancementConfig(this)
+        advancementConfig = advancements
+        Bukkit.getPluginManager().registerEvents(AdvancementListener(advancements, config, papi), this)
 
         bind("chat", ChatCommand(this, config, messages), null)
         bind("global", GlobalCommand(chatService, messages), tabCompleter)
@@ -148,6 +154,7 @@ class ZoChatPlugin : JavaPlugin() {
         announcer?.reload()
         bubble?.reload()
         guardConfig?.reload()
+        advancementConfig?.reload()
         cooldowns.reset()
         logger.info("zoChat reloaded")
     }
