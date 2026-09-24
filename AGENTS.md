@@ -62,6 +62,7 @@ zorahm.zochat
 │   ├── CooldownService.kt            // per-channel anti-spam cooldowns (ConcurrentHashMap)
 │   ├── PlaceholderConfig.kt          // loads placeholders.yml (builtin/custom ^ defs + world-names)
 │   ├── PapiHook.kt                   // the ONLY place that touches PlaceholderAPI classes
+│   ├── LuckPermsMeta.kt              // {meta:<key>} -> LuckPerms meta value (chat, /say, bubble formats)
 │   └── ZoChatExpansion.kt            // our own %zochat_...% expansion (sync, no-DB values only)
 ├── advancement/
 │   ├── AdvancementConfig.kt          // loads advancements.yml (toggle + format per frame task/goal/challenge)
@@ -111,7 +112,7 @@ All chat messages (natural chat, /g, /l) go through a single `ChatService.send(p
 4. Mention processing (`@player`, `@everyone`, `@here`) — runs **before** placeholder expansion so an `@` inside an expanded value (PAPI, anvil-renamed item in `^item`) can never trigger a mention
 5. Placeholder processing (`^loc`, `^health`, etc.) via `PlaceholderService.processEscaped` (input already escaped; only trusted config formats carry tags)
 6. Chat log to DB (async)
-7. LuckPerms prefix/suffix via `PrefixFormatter.toMiniMessage()`, **inlined** into the format string (not inserted as closed components) so an unclosed colour/gradient in a suffix flows into `{player}`/`{message}`
+7. `{meta:<key>}` tokens in the format are resolved from the player's LuckPerms meta (`LuckPermsMeta.expand`, values through `PrefixFormatter.toMiniMessage`, missing key = empty), then LuckPerms prefix/suffix via `PrefixFormatter.toMiniMessage()`, **inlined** into the format string (not inserted as closed components) so an unclosed colour/gradient in a suffix flows into `{player}`/`{message}`
 8. Build final Component (`ChatService.render`): `{player}`/`{message}` become `<zochat_player>`/`<zochat_message>` inserted-component tags (`Placeholder.component`), NOT `replaceText()` targets — an unclosed `<gradient>` from the prefix/suffix splits a literal `{player}` into per-character components that `replaceText` can't match. They stay components (player input was already escaped in step 3) and inherit the open colour/gradient
 9. Route: LOCAL = players in radius (squared distance, same world — `localRecipients`) plus the console, GLOBAL = `Bukkit.broadcast()`. Mention notifications go only to mentioned players who are recipients (`onlyRecipients`), so local `@player`/`@everyone` never pings someone out of range
 
@@ -154,6 +155,8 @@ LuckPerms prefix/suffix meta may contain **legacy color codes** (`&c`, `§c`, `&
 
 Never pass raw LuckPerms strings to `miniMessage.deserialize()` directly, or legacy codes render as raw characters (issue #3).
 
+Arbitrary per-group/per-player text comes from LuckPerms **meta** (`/lp group vip meta set clan "&b[Wolves]"`) via `{meta:<key>}` in the chat formats, `say.format` and `bubble.yml`'s `format` — any number of keys, no PlaceholderAPI needed. `LuckPermsMeta.expand` replaces tokens literally (lambda `Regex.replace`, so `$`/`\` in values are safe); the console's `/say` resolves them to empty. Multiple prefixes need no zoChat support: LuckPerms' own `meta-formatting` stack makes `getPrefix()` return the combined stack.
+
 ### Advancement Messages (AdvancementListener.kt)
 
 Vanilla announces an advancement with translatable components (`chat.type.advancement.*`, the advancement's title and description keys) that each **client** resolves in its own language; the description hover lives on the advancement name component. So the listener never flattens anything to a string: it inserts Paper's `Advancement.displayName()` (the vanilla `[Title]` with hover) and the player name as inserted-component tags (`{advancement}`/`{player}` → `Placeholder.component`, as in `ChatService.render`), which also makes them usable as `<lang:chat.type.advancement.task:'{player}':'{advancement}'>` arguments. It replaces `event.message(...)` instead of cancelling and broadcasting, so vanilla keeps delivery (all players + console) and `event.message() == null` (hidden advancements, recipes, the `announceAdvancements` gamerule) stays silent.
@@ -190,7 +193,7 @@ JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extend
 
 Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching), PlaceholderMatchTest (`buildPattern` longest-first matching), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced decisions), ChatServiceTest (gradient-safe render, local recipients, mention scope), MentionPatternTest, ItemPlaceholderTest, ChatLogCommandTest (escaping), SayListenerTest (permission gate), DatabaseTest (MySQL DDL/URL).
 
-Also: AdvancementListenerTest (hover/translation survive `<lang>` and gradients; shipped `advancements.yml` defaults parse), PapiHookTest (`expandTokens` escaping/colours), PlayerTextTest (backslash-safe escaping), RepositoryTest (both repositories against a real SQLite file — `sqlite-jdbc` is `testImplementation` only; Paper ships it at runtime).
+Also: LuckPermsMetaTest (`{meta:<key>}` expansion), AdvancementListenerTest (hover/translation survive `<lang>` and gradients; shipped `advancements.yml` defaults parse), PapiHookTest (`expandTokens` escaping/colours), PlayerTextTest (backslash-safe escaping), RepositoryTest (both repositories against a real SQLite file — `sqlite-jdbc` is `testImplementation` only; Paper ships it at runtime).
 
 There is no mocking library: `src/test/kotlin/zorahm/zochat/Fakes.kt` builds `Player`/`World`/`Plugin` stand-ins as JDK dynamic proxies, plus `Fakes.leaves()` to inspect a Component's effective per-leaf style.
 

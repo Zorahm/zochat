@@ -30,6 +30,8 @@ A Paper plugin that adds local/global chat, private messaging, player mentions, 
   - Timed broadcasts on independent timers, sequential or random rotation, configured in `announcer.yml`.
 - **Bubble chat**
   - Floating `TextDisplay` above the player's head on chat and/or `/bubble`, configured in `bubble.yml`.
+- **LuckPerms meta in formats**
+  - `{meta:<key>}` in chat, `/say` and bubble formats shows any LuckPerms meta value (e.g. `/lp group vip meta set clan "&b[Wolves]"` → `{meta:clan}`), as many keys as you like, no PlaceholderAPI needed.
 - **Advancement messages**
   - Custom formats per advancement type (task / goal / challenge) in `advancements.yml`. The advancement keeps the vanilla hover with its description, and titles — optionally the whole phrase via `<lang:...>` — are shown in each player's own client language.
 - **Command guard**
