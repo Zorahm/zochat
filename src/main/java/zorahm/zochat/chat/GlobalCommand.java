@@ -21,7 +21,8 @@ public final class GlobalCommand implements CommandExecutor {
             s.sendMessage(messages.component("errors.only-players"));
             return true;
         }
-        if (args.length == 0) return true;
+        // false -> Bukkit prints the plugin.yml usage line instead of silently doing nothing.
+        if (args.length == 0) return false;
         chat.send(p, String.join(" ", args), ChatChannel.GLOBAL);
         return true;
     }

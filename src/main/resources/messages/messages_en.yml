@@ -9,6 +9,9 @@ private-messages:
   player-not-found: "<red>Player {player} not found or offline!</red>"
   offline-sent: "<green>Message sent to {player} (offline).</green>"
   offline-disabled: "<red>Offline messages are disabled.</red>"
+  offline-full: "<red>{player} has too many unread messages. Try again later.</red>"
+  offline-failed: "<red>Could not save the message for {player}. Try again later.</red>"
+  self: "<red>You can't message yourself!</red>"
 
 # /bubble command
 bubble:
@@ -25,6 +28,7 @@ reply:
 chat:
   spam-warning: "<red>Don't spam! Wait a bit before sending another message.</red>"
   local-disabled: "<red>Local chat is disabled on the server!</red>"
+  global-disabled: "<red>Global chat is disabled on the server!</red>"
   message-player: "Message {player} privately"
   message-timestamp: "Sent at: {time}"
   message-reply-hover: "<gray>Click to reply</gray>"

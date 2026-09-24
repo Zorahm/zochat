@@ -9,6 +9,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.plugin.Plugin
 import zorahm.zochat.config.Messages
 import zorahm.zochat.storage.ChatLogRepository
+import zorahm.zochat.util.PlayerText
 import java.util.UUID
 
 class ChatLogCommand(
@@ -71,6 +72,6 @@ class ChatLogCommand(
          */
         @JvmStatic
         fun renderLine(template: String, message: String): Component =
-            MM.deserialize(template.replace("{message}", MM.escapeTags(message)))
+            MM.deserialize(template.replace("{message}", PlayerText.escape(message)))
     }
 }

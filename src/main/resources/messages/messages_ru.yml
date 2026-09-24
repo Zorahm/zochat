@@ -9,6 +9,9 @@ private-messages:
   player-not-found: "<red>Игрок {player} не найден!</red>"
   offline-sent: "<green>Сообщение отправлено игроку {player} (оффлайн).</green>"
   offline-disabled: "<red>Оффлайн-сообщения отключены.</red>"
+  offline-full: "<red>У {player} слишком много непрочитанных сообщений. Попробуйте позже.</red>"
+  offline-failed: "<red>Не удалось сохранить сообщение для {player}. Попробуйте позже.</red>"
+  self: "<red>Нельзя написать самому себе!</red>"
 
 # Сообщения для команды /bubble
 bubble:
@@ -25,6 +28,7 @@ reply:
 chat:
   spam-warning: "<red>Не спамьте! Подождите немного перед отправкой следующего сообщения.</red>"
   local-disabled: "<red>Локальный чат отключен на сервере!</red>"
+  global-disabled: "<red>Глобальный чат отключен на сервере!</red>"
   message-player: "Написать {player} в ЛС"
   message-timestamp: "Отправлено: {time}"
   message-reply-hover: "<gray>Нажмите, чтобы ответить</gray>"

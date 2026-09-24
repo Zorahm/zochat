@@ -58,11 +58,7 @@ class ZoChatPlugin : JavaPlugin() {
     override fun onEnable() {
         displayBanner()
 
-        if (Bukkit.getPluginManager().getPlugin("LuckPerms") == null) {
-            logger.severe("LuckPerms not found - disabling zoChat. Download: https://luckperms.net/download")
-            Bukkit.getPluginManager().disablePlugin(this)
-            return
-        }
+        // No presence check needed: LuckPerms is a hard `depend`, so Paper won't enable zoChat without it.
         val luckPerms: LuckPerms = LuckPermsProvider.get()
 
         ClassPreloader.preload(file, classLoader, logger)
@@ -85,6 +81,11 @@ class ZoChatPlugin : JavaPlugin() {
         val offline = OfflineMessageRepository(db)
         chatLog.createTable()
         offline.createTable()
+        // Re-reads the setting each run, so /chat reload applies without restarting the timer. The task only
+        // enqueues the DELETE on the DB thread, so running it on the main thread costs nothing.
+        Bukkit.getScheduler().runTaskTimer(
+            this, Runnable { chatLog.purgeOlderThan(config.chatLogRetentionDays) }, 20L * 60, 20L * 60 * 60 * 24
+        )
 
         val bannedWords = BannedWordsFilter(config)
         val mentions = MentionHandler(this, config)
@@ -99,7 +100,7 @@ class ZoChatPlugin : JavaPlugin() {
         val chatService = ChatService(
             config, messages, luckPerms, bannedWords, mentions, placeholders, papi, chatLog, cooldowns, bubbleService
         )
-        val pm = PrivateMessageService(config, messages, bannedWords, placeholders, offline, cooldowns)
+        val pm = PrivateMessageService(this, config, messages, bannedWords, placeholders, offline, cooldowns)
         welcome = WelcomeMessages(this)
         announcer = AnnouncerService(this, AnnouncerConfig(this), papi).also { it.start() }
 
@@ -115,7 +116,7 @@ class ZoChatPlugin : JavaPlugin() {
 
         bind("chat", ChatCommand(this, config, messages), null)
         bind("global", GlobalCommand(chatService, messages), tabCompleter)
-        bind("local", LocalCommand(chatService, config, messages), tabCompleter)
+        bind("local", LocalCommand(chatService, messages), tabCompleter)
         bind("msg", MsgCommand(pm, messages), null)
         bind("reply", ReplyCommand(pm, messages), null)
         bind("chatlog", ChatLogCommand(this, chatLog, messages), null)
@@ -166,15 +167,15 @@ class ZoChatPlugin : JavaPlugin() {
         val meta = pluginMeta
         cs.sendMessage(Component.text(""))
         cs.sendMessage(
-            Component.text(" ███████╗ ██████╗  ██████╗██╗  ██║ █████╗ ████████║")
+            Component.text(" ███████╗ ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗")
                 .color(TextColor.fromHexString("#d45079"))
                 .append(Component.text("    |    Version: ").color(NamedTextColor.GRAY))
                 .append(Component.text(meta.version).color(NamedTextColor.WHITE))
         )
         cs.sendMessage(
-            Component.text(" ╚══███╔╝██╔═══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══")
+            Component.text(" ╚══███╔╝██╔═══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══╝")
                 .color(TextColor.fromHexString("#d45079"))
-                .append(Component.text("     |    Author: ").color(NamedTextColor.GRAY))
+                .append(Component.text("    |    Author: ").color(NamedTextColor.GRAY))
                 .append(Component.text(meta.authors.firstOrNull() ?: "Unknown").color(NamedTextColor.WHITE))
         )
         cs.sendMessage(
@@ -192,7 +193,7 @@ class ZoChatPlugin : JavaPlugin() {
                 .color(TextColor.fromHexString("#d45079"))
         )
         cs.sendMessage(
-            Component.text(" ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ══╝")
+            Component.text(" ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝")
                 .color(TextColor.fromHexString("#d45079"))
         )
         cs.sendMessage(Component.text(""))

@@ -21,7 +21,7 @@ anti-spam:
 # ───── Banned words filter settings ─────
 banned-words:
   enabled: true                        # Enable banned words filtering
-  mode: "smart"                        # Filter mode: "exact", "contains", "smart" (smart check with normalization)
+  mode: "smart"                        # "exact" (standalone word), "contains" (anywhere), "smart" (contains + word boundary)
   action: "block"                      # Action: "block" (block message), "replace" (replace with ***)
   normalize: true                      # Normalize leet/Cyrillic (h3ll0 → hello). Disable on false positives
   words: []                            # List of banned words (e.g., ["bad_word", "regex:\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b"])
@@ -71,6 +71,7 @@ private-messages:
 # ───── Offline message settings ─────
 offline-messages:
   enabled: true
+  max-per-player: 20                    # Max waiting messages per receiver (0 = unlimited)
 
 # ───── Database settings for chat logging ─────
 database:
@@ -81,6 +82,7 @@ database:
     database: "minecraft_chat"           # Database name
     username: "root"                     # Username for connection
     password: "password"                 # Database password
+  chat-log-retention-days: 0            # Delete chat log entries older than this many days (0 = keep forever)
 
 # ───── Join and quit message settings ─────
 join-message:

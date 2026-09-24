@@ -14,6 +14,7 @@ import zorahm.zochat.bubble.BubbleService;
 import zorahm.zochat.config.ChatConfig;
 import zorahm.zochat.config.Messages;
 import zorahm.zochat.storage.ChatLogRepository;
+import zorahm.zochat.util.PlayerText;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -58,6 +59,10 @@ public final class ChatService {
 
     public void send(Player sender, String rawMessage, ChatChannel channel) {
         UUID playerId = sender.getUniqueId();
+        // A lone "!" (global prefix with no text) arrives here empty — don't broadcast a blank line.
+        if (rawMessage.isBlank() || !mayUse(sender, channel)) {
+            return;
+        }
 
         // Filter before the cooldown so a message rejected for a banned word doesn't burn the cooldown.
         BannedWordsFilter.FilterResult filterResult = bannedWords.checkMessage(rawMessage);
@@ -81,19 +86,15 @@ public final class ChatService {
             }
         }
 
-        // Players typing %...% is opt-in and permission-gated (abuse risk). Expand into a separate
-        // string so the DB log below keeps the player's literal text, not the resolved placeholders.
-        String displayMessage = message;
-        if (config.isPlaceholderApiEnabled() && config.isPlaceholderApiPlayerMessagesEnabled()
-                && sender.hasPermission(config.getPlaceholderApiPlayerPermission())) {
-            displayMessage = papi.apply(sender, message);
-        }
-
         // Escape once, then stay at the string level until the final deserialize. Mentions run
-        // BEFORE placeholder expansion so an '@' inside an expanded value (a PAPI value, an anvil-
-        // renamed item in ^item) can never trigger a mention; it also drops the old fragile
+        // BEFORE ^placeholder expansion so an '@' inside an expanded value (an anvil-renamed item in
+        // ^item) can never trigger a mention; it also drops the old fragile
         // Component -> serialize -> regex -> deserialize round-trip.
-        String escaped = mm.escapeTags(displayMessage);
+        // Players typing %...% is opt-in and permission-gated (abuse risk); the DB log below keeps the
+        // player's literal text either way.
+        boolean playerPapi = config.isPlaceholderApiEnabled() && config.isPlaceholderApiPlayerMessagesEnabled()
+                && sender.hasPermission(config.getPlaceholderApiPlayerPermission());
+        String escaped = playerPapi ? papi.escapeWithPlaceholders(sender, message) : PlayerText.escape(message);
         MentionHandler.MentionResult mentionResult = mentions.processMentions(escaped, sender);
         Component processedMessageComponent =
                 placeholders.processEscaped(sender, mentionResult.getProcessedMessage());
@@ -152,13 +153,31 @@ public final class ChatService {
             for (Player r : recipients) {
                 r.sendMessage(finalMessage);
             }
+            // Global goes through Bukkit.broadcast, which reaches the console; local chat never did,
+            // so it was missing from the server log entirely.
+            Bukkit.getConsoleSender().sendMessage(finalMessage);
         } else {
             Bukkit.getServer().broadcast(finalMessage);
         }
 
-        // Bubble is shown in addition to chat; it gates itself on enabled + CHAT trigger. Pass the
-        // filtered message so the bubble censors banned words just like chat does.
-        bubble.onChat(sender, message);
+        // Bubble is shown in addition to chat; it gates itself on enabled + CHAT trigger. It gets the
+        // processed message (filtered, mentions and ^placeholders rendered) — the raw text left a
+        // literal "^loc" floating above the player's head.
+        bubble.onChat(sender, processedMessageComponent);
+    }
+
+    private boolean mayUse(Player sender, ChatChannel channel) {
+        boolean global = channel == ChatChannel.GLOBAL;
+        // global-chat.enabled and the zochat.global/zochat.local nodes used to be declared but never read.
+        if (global ? !config.isGlobalChatEnabled() : !config.isLocalChatEnabled()) {
+            sender.sendMessage(messages.component(global ? "chat.global-disabled" : "chat.local-disabled"));
+            return false;
+        }
+        if (!sender.hasPermission(global ? "zochat.global" : "zochat.local")) {
+            sender.sendMessage(messages.component("errors.no-permission"));
+            return false;
+        }
+        return true;
     }
 
     // {player}/{message} become inserted-component tags rather than replaceText() targets: an unclosed

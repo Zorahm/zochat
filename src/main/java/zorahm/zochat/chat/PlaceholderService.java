@@ -9,6 +9,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import zorahm.zochat.config.Messages;
+import zorahm.zochat.util.PlayerText;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -16,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -92,7 +94,7 @@ public class PlaceholderService {
         // Escape the player's text so their literal '<...>' is never parsed as MiniMessage — otherwise
         // anyone could inject colours, gradients or <click:run_command:...> that runs as the viewer.
         // Only trusted, config-defined placeholder values (substituted below) are meant to carry tags.
-        return processEscaped(player, miniMessage.escapeTags(message));
+        return processEscaped(player, PlayerText.escape(message));
     }
 
     // The caller has ALREADY tag-escaped the player text. ChatService escapes once and then splices
@@ -130,7 +132,7 @@ public class PlaceholderService {
     // otherwise an item named "<click:run_command:'/op me'>Sword" becomes a live click in ^item.
     static String formatItem(String format, String itemName, int amount) {
         return format
-                .replace("{item}", MiniMessage.miniMessage().escapeTags(itemName))
+                .replace("{item}", PlayerText.escape(itemName))
                 .replace("{amount}", String.valueOf(amount));
     }
 
@@ -139,9 +141,9 @@ public class PlaceholderService {
         switch (def.getName()) {
             case "loc":
                 return format
-                        .replace("{x}", String.format("%.0f", player.getLocation().getX()))
-                        .replace("{y}", String.format("%.0f", player.getLocation().getY()))
-                        .replace("{z}", String.format("%.0f", player.getLocation().getZ()))
+                        .replace("{x}", String.format(Locale.ROOT, "%.0f", player.getLocation().getX()))
+                        .replace("{y}", String.format(Locale.ROOT, "%.0f", player.getLocation().getY()))
+                        .replace("{z}", String.format(Locale.ROOT, "%.0f", player.getLocation().getZ()))
                         .replace("{world}", config.worldName(player.getWorld().getName()));
 
             case "world":
@@ -151,19 +153,20 @@ public class PlaceholderService {
                 long worldTime = player.getWorld().getTime();
                 long hours = (worldTime / 1000 + 6) % 24;
                 long minutes = (worldTime % 1000) * 60 / 1000;
-                String gameTime = String.format("%02d:%02d", hours, minutes);
+                String gameTime = String.format(Locale.ROOT, "%02d:%02d", hours, minutes);
                 String realTime = realtimeFormatter.format(Instant.now());
                 return format
                         .replace("{time}", gameTime)
                         .replace("{realtime}", realTime);
 
             case "health":
+                // Locale.ROOT throughout: the server's default locale made "20,0" on ru hosts.
                 double health = player.getHealth();
                 var maxHealthAttr = player.getAttribute(Attribute.MAX_HEALTH);
                 double maxHealth = maxHealthAttr != null ? maxHealthAttr.getValue() : 20.0;
                 return format
-                        .replace("{health}", String.format("%.1f", health))
-                        .replace("{maxhealth}", String.format("%.1f", maxHealth));
+                        .replace("{health}", String.format(Locale.ROOT, "%.1f", health))
+                        .replace("{maxhealth}", String.format(Locale.ROOT, "%.1f", maxHealth));
 
             case "ping":
                 return format.replace("{ping}", String.valueOf(player.getPing()));

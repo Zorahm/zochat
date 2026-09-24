@@ -5,18 +5,21 @@ import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
 import zorahm.zochat.chat.BannedWordsFilter
 import zorahm.zochat.chat.CooldownService
 import zorahm.zochat.chat.PlaceholderService
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.config.Messages
 import zorahm.zochat.storage.OfflineMessageRepository
+import zorahm.zochat.util.PlayerText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 class PrivateMessageService(
+    private val plugin: Plugin,
     private val config: ChatConfig,
     private val messages: Messages,
     private val bannedWords: BannedWordsFilter,
@@ -41,11 +44,34 @@ class PrivateMessageService(
         }
         val message = filterResult.processedMessage
 
+        // Resolve the target BEFORE the cooldown: a typo'd name used to burn the cooldown too.
+        val target = Bukkit.getPlayerExact(targetName)
+        // getOfflinePlayerIfCached avoids the deprecated, main-thread-blocking name lookup;
+        // null means the player has never been seen on this server.
+        val offlineTarget = if (target == null) Bukkit.getOfflinePlayerIfCached(targetName) else null
+        if (target == null && offlineTarget == null) {
+            sender.sendMessage(
+                mm.deserialize(
+                    messages.get("private-messages.player-not-found").replace("{player}", PlayerText.escape(targetName))
+                )
+            )
+            return
+        }
+        if ((target?.uniqueId ?: offlineTarget?.uniqueId) == sender.uniqueId) {
+            sender.sendMessage(mm.deserialize(messages.get("private-messages.self")))
+            return
+        }
+
         if (config.isAntiSpamEnabled && !sender.hasPermission(config.spamBypassPermission)) {
             if (cooldowns.isOnCooldown(sender.uniqueId, CooldownService.Channel.PRIVATE, config.privateMessageCooldown)) {
                 sender.sendMessage(mm.deserialize(messages.get("chat.spam-warning")))
                 return
             }
+        }
+
+        if (target == null) {
+            sendOffline(sender, offlineTarget!!.uniqueId, targetName, message)
+            return
         }
 
         val timestamp = time.format(Instant.ofEpochMilli(System.currentTimeMillis()))
@@ -55,28 +81,6 @@ class PrivateMessageService(
                     mm.deserialize(messages.get("chat.message-timestamp").replace("{time}", timestamp))
                 )
             )
-
-        val target = Bukkit.getPlayerExact(targetName)
-        if (target == null) {
-            // getOfflinePlayerIfCached avoids the deprecated, main-thread-blocking name lookup;
-            // null means the player has never been seen on this server.
-            val cached = Bukkit.getOfflinePlayerIfCached(targetName)
-            if (cached == null) {
-                sender.sendMessage(
-                    mm.deserialize(messages.get("private-messages.player-not-found").replace("{player}", targetName))
-                )
-                return
-            }
-            if (config.isOfflineMessagesEnabled) {
-                offline.save(sender.uniqueId, cached.uniqueId, message)
-                sender.sendMessage(
-                    mm.deserialize(messages.get("private-messages.offline-sent").replace("{player}", targetName))
-                )
-            } else {
-                sender.sendMessage(mm.deserialize(messages.get("private-messages.offline-disabled")))
-            }
-            return
-        }
 
         val incoming = mm.deserialize(config.privateMessageFormat.replace("{player}", sender.name))
             .replaceText { it.matchLiteral("{message}").replacement(messageComponent) }
@@ -91,6 +95,23 @@ class PrivateMessageService(
         sender.sendMessage(outgoing)
         lastMessaged[target.uniqueId] = sender.uniqueId
         lastMessaged[sender.uniqueId] = target.uniqueId
+    }
+
+    private fun sendOffline(sender: Player, receiver: UUID, targetName: String, message: String) {
+        if (!config.isOfflineMessagesEnabled) {
+            sender.sendMessage(mm.deserialize(messages.get("private-messages.offline-disabled")))
+            return
+        }
+        offline.save(sender.uniqueId, receiver, message, config.offlineMessagesMaxPerPlayer) { result ->
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                val key = when (result) {
+                    OfflineMessageRepository.SaveResult.SAVED -> "private-messages.offline-sent"
+                    OfflineMessageRepository.SaveResult.INBOX_FULL -> "private-messages.offline-full"
+                    else -> "private-messages.offline-failed"
+                }
+                sender.sendMessage(mm.deserialize(messages.get(key).replace("{player}", targetName)))
+            })
+        }
     }
 
     fun reply(sender: Player, message: String) {

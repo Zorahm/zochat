@@ -24,6 +24,10 @@ public final class ChatListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
+        // Both channels off: zoChat isn't the chat plugin here, so leave the message to vanilla/others.
+        if (!config.isLocalChatEnabled() && !config.isGlobalChatEnabled()) {
+            return;
+        }
         String raw = plain.serialize(event.message());
         ChatChannel channel;
         if (raw.startsWith("!")) {

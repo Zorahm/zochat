@@ -21,9 +21,11 @@ public final class ChatLogRepository {
             try (Statement st = db.conn().createStatement()) {
                 st.execute("CREATE TABLE IF NOT EXISTS chat_logs (" +
                         db.idColumn() + "," +
-                        "player_uuid TEXT NOT NULL," +
+                        "player_uuid " + db.uuidColumnType() + " NOT NULL," +
                         "message TEXT NOT NULL," +
-                        "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)");
+                        "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP" +
+                        db.inlineIndex("idx_chat_logs_player", "player_uuid") + ")");
+                db.createIndex(st, "idx_chat_logs_player", "chat_logs", "player_uuid");
             } catch (SQLException e) {
                 db.logger().warning("create chat_logs failed: " + e.getMessage());
             }
@@ -46,7 +48,8 @@ public final class ChatLogRepository {
     public void recentFor(UUID player, Consumer<List<String>> callback) {
         db.runAsync(() -> {
             List<String> out = new ArrayList<>();
-            String sql = "SELECT message FROM chat_logs WHERE player_uuid = ? ORDER BY timestamp DESC LIMIT 10";
+            // By id, not timestamp: timestamps have second precision, so same-second messages came back shuffled.
+            String sql = "SELECT message FROM chat_logs WHERE player_uuid = ? ORDER BY id DESC LIMIT 10";
             try (PreparedStatement st = db.conn().prepareStatement(sql)) {
                 st.setString(1, player.toString());
                 try (ResultSet rs = st.executeQuery()) {
@@ -58,6 +61,23 @@ public final class ChatLogRepository {
                 db.logger().warning("chat_logs select failed: " + e.getMessage());
             }
             callback.accept(out);
+        });
+    }
+
+    // Drops entries older than retentionDays (0 = keep forever) so the log can't grow without bound.
+    public void purgeOlderThan(int retentionDays) {
+        if (retentionDays <= 0) {
+            return;
+        }
+        db.runAsync(() -> {
+            try (Statement st = db.conn().createStatement()) {
+                int removed = st.executeUpdate("DELETE FROM chat_logs WHERE " + db.olderThanDays("timestamp", retentionDays));
+                if (removed > 0) {
+                    db.logger().info("Purged " + removed + " chat log entries older than " + retentionDays + " days");
+                }
+            } catch (SQLException e) {
+                db.logger().warning("chat_logs purge failed: " + e.getMessage());
+            }
         });
     }
 

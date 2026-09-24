@@ -35,6 +35,8 @@ dependencies {
     implementation(kotlin("stdlib"))
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    // Paper provides SQLite at runtime; tests need their own driver to exercise the repositories.
+    testImplementation("org.xerial:sqlite-jdbc:3.47.1.0")
 }
 
 tasks.test { useJUnitPlatform() }

@@ -8,7 +8,6 @@ website: https://github.com/Zorahm/zochat
 depend:
   - LuckPerms
 softdepend:
-  - Adventure
   - PlaceholderAPI
 commands:
   chat:
@@ -17,20 +16,24 @@ commands:
     aliases: [zochat]
   global:
     description: Send a message to global chat
-    usage: /<command> [message]
+    usage: /<command> <message>
     aliases: [g]
+    permission: zochat.global
   local:
     description: Send a message to local chat
-    usage: /<command> [message]
+    usage: /<command> <message>
     aliases: [l]
+    permission: zochat.local
   msg:
     description: Send a private message to a player
     usage: /<command> <player> <message>
     aliases: [m, tell, w]
+    permission: zochat.msg
   reply:
     description: Reply to the last private message
     usage: /<command> <message>
     aliases: [r]
+    permission: zochat.msg
   chatlog:
     description: View and clear chat logs
     usage: /<command> <player|clear>

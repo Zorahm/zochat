@@ -24,7 +24,7 @@ public class MentionTabCompleter implements TabCompleter {
 
         if (lastArg.startsWith("@")) {
             String partial = lastArg.substring(1);
-            List<String> suggestions = mentionHandler.getPlayerSuggestions(partial);
+            List<String> suggestions = mentionHandler.getPlayerSuggestions(partial, sender);
 
             List<String> result = new ArrayList<>();
             for (String suggestion : suggestions) {
@@ -33,6 +33,7 @@ public class MentionTabCompleter implements TabCompleter {
             return result;
         }
 
-        return new ArrayList<>();
+        // null = Bukkit's default completion (online player names); an empty list switched it off in /g and /l.
+        return null;
     }
 }

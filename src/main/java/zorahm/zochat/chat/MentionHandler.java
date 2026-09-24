@@ -4,6 +4,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.Permissible;
 import org.bukkit.plugin.Plugin;
 import zorahm.zochat.config.ChatConfig;
 import zorahm.zochat.util.Sounds;
@@ -182,14 +183,17 @@ public class MentionHandler {
         }
     }
 
-    public List<String> getPlayerSuggestions(String partial) {
+    public List<String> getPlayerSuggestions(String partial, Permissible viewer) {
         String lower = partial.toLowerCase();
         List<String> suggestions = new ArrayList<>();
 
-        if ("everyone".startsWith(lower) || "все".startsWith(lower)) {
+        // Only suggest what the player may actually use — without the permission it's plain text.
+        if (("everyone".startsWith(lower) || "все".startsWith(lower))
+                && viewer.hasPermission(chatConfig.getMentionEveryonePermission())) {
             suggestions.add("everyone");
         }
-        if ("here".startsWith(lower) || "здесь".startsWith(lower)) {
+        if (("here".startsWith(lower) || "здесь".startsWith(lower))
+                && viewer.hasPermission(chatConfig.getMentionHerePermission())) {
             suggestions.add("here");
         }
 

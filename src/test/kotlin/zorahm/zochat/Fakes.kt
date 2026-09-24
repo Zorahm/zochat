@@ -6,12 +6,15 @@ import net.kyori.adventure.text.format.Style
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
+import java.io.File
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+import java.util.logging.Logger
 
 /**
- * Minimal Player/World stand-ins for tests. paper-api is compileOnly and there's no mocking library,
+ * Minimal Player/World/Plugin stand-ins for tests. paper-api is compileOnly and there's no mocking library,
  * so these are JDK dynamic proxies: only the handful of methods the code under test calls are answered,
  * everything else returns null/false/0.
  */
@@ -34,6 +37,15 @@ object Fakes {
             "getWorld" -> world
             "getLocation" -> Location(world, x, y, z)
             "hasPermission" -> (args?.getOrNull(0) as? String)?.let { it in permissions }
+            else -> null
+        }
+    }
+
+    fun plugin(dataFolder: File): Plugin = proxy(Plugin::class.java, "zoChat") { method, _ ->
+        when (method.name) {
+            "getDataFolder" -> dataFolder
+            "getLogger" -> Logger.getLogger("zoChat-test")
+            "getName" -> "zoChat"
             else -> null
         }
     }

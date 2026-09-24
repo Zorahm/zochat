@@ -151,6 +151,14 @@ public class ChatConfig {
         return config.getBoolean("offline-messages.enabled", true);
     }
 
+    public int getOfflineMessagesMaxPerPlayer() {
+        return config.getInt("offline-messages.max-per-player", 20);
+    }
+
+    public int getChatLogRetentionDays() {
+        return config.getInt("database.chat-log-retention-days", 0);
+    }
+
     public boolean isDebugModeEnabled() {
         return config.getBoolean("debug-mode", false);
     }

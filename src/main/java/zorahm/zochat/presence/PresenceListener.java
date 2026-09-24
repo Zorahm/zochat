@@ -16,6 +16,7 @@ import zorahm.zochat.config.ChatConfig;
 import zorahm.zochat.config.Messages;
 import zorahm.zochat.privatemsg.PrivateMessageService;
 import zorahm.zochat.storage.OfflineMessageRepository;
+import zorahm.zochat.util.PlayerText;
 import zorahm.zochat.util.Sounds;
 
 import java.time.Instant;
@@ -49,9 +50,13 @@ public final class PresenceListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        event.joinMessage(null);
-
-        if (config.isJoinMessageEnabled() && !player.hasPermission(config.getJoinStealthPermission())) {
+        boolean stealth = player.hasPermission(config.getJoinStealthPermission());
+        // Only replace vanilla's line when ours is on (or the player is hidden): with join-message
+        // disabled — the default — the server used to show no join message at all.
+        if (config.isJoinMessageEnabled() || stealth) {
+            event.joinMessage(null);
+        }
+        if (config.isJoinMessageEnabled() && !stealth) {
             Bukkit.getServer().sendMessage(mm.deserialize(
                     config.getJoinMessageFormat().replace("{player}", player.getName())));
             playToAll(config.getJoinMessageSound());
@@ -70,8 +75,9 @@ public final class PresenceListener implements Listener {
             }.runTaskLater(plugin, welcome.getDelay());
         }
 
-        offline.drainFor(player.getUniqueId(), list -> Bukkit.getScheduler().runTask(plugin, () -> {
-            if (list.isEmpty()) return;
+        offline.pendingFor(player.getUniqueId(), list -> Bukkit.getScheduler().runTask(plugin, () -> {
+            // Left before the DB answered: keep the messages for the next join instead of losing them.
+            if (list.isEmpty() || !player.isOnline()) return;
             player.sendMessage(mm.deserialize(messages.get("chat.offline-messages-header")
                     .replace("{count}", String.valueOf(list.size()))));
             for (OfflineMessageRepository.OfflineMessage om : list) {
@@ -80,21 +86,25 @@ public final class PresenceListener implements Listener {
                 String ts = time.format(Instant.ofEpochMilli(om.timestamp().getTime()));
                 // Escape the stored sender text — it's the player's literal message and must not be
                 // re-parsed as MiniMessage (would let tags injected into a PM render on delivery).
-                Component body = mm.deserialize(mm.escapeTags(om.message()))
+                Component body = mm.deserialize(PlayerText.escape(om.message()))
                         .hoverEvent(HoverEvent.showText(mm.deserialize(
                                 messages.get("chat.message-timestamp").replace("{time}", ts))));
                 Component line = mm.deserialize(config.getPrivateMessageFormat().replace("{player}", senderName))
                         .replaceText(b -> b.matchLiteral("{message}").replacement(body));
                 player.sendMessage(line);
             }
+            offline.delete(list);
         }));
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        event.quitMessage(null);
-        if (config.isQuitMessageEnabled() && !player.hasPermission(config.getQuitStealthPermission())) {
+        boolean stealth = player.hasPermission(config.getQuitStealthPermission());
+        if (config.isQuitMessageEnabled() || stealth) {
+            event.quitMessage(null);
+        }
+        if (config.isQuitMessageEnabled() && !stealth) {
             Bukkit.getServer().sendMessage(mm.deserialize(
                     config.getQuitMessageFormat().replace("{player}", player.getName())));
             playToAll(config.getQuitMessageSound());

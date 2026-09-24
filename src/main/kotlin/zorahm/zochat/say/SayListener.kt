@@ -13,6 +13,7 @@ import org.bukkit.permissions.Permissible
 import zorahm.zochat.chat.PapiHook
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.guard.CommandGuard
+import zorahm.zochat.util.PlayerText
 
 /**
  * Replaces vanilla /say's plain white output with the plugin's MiniMessage formatting so it reads
@@ -54,7 +55,7 @@ class SayListener(
         }
         // Player text is untrusted: escape so typed <...> never renders as MiniMessage (no colour
         // or <click:run_command> injection), exactly like the chat pipeline does.
-        Bukkit.getServer().broadcast(render(format, sender.name, mm.escapeTags(rawMessage)))
+        Bukkit.getServer().broadcast(render(format, sender.name, PlayerText.escape(rawMessage)))
     }
 
     private fun broadcastFromConsole(rawMessage: String) {
