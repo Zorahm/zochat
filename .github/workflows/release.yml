@@ -1,4 +1,4 @@
-name: Publish zoChat JAR to release
+name: Publish zoChat JAR and badge packs to release
 
 on:
   push:
@@ -42,12 +42,17 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build --no-daemon
 
-      - name: Attach JAR to the release
+      # One pack per style. The build above already failed if the committed badges.yml in the jar
+      # is stale, so these packs and the jar agree on every badge character.
+      - name: Build the badge resource packs
+        run: ./gradlew :prefixgen:run --no-daemon
+
+      - name: Attach JAR and resource packs to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           # A tag push has no release yet; a published-release run already has one.
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes
-          # --clobber so re-running the workflow replaces the asset instead of failing.
-          gh release upload "$TAG" build/libs/zoChat-*.jar --clobber
+          # --clobber so re-running the workflow replaces the assets instead of failing.
+          gh release upload "$TAG" build/libs/zoChat-*.jar tools/prefixgen/build/resourcepack/zochat-badges-*.zip --clobber
