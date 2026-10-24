@@ -10,6 +10,7 @@ zoChat is a chat plugin for Paper servers. It splits chat into local and global 
 - Java 21
 - LuckPerms 5.4 or newer (required)
 - PlaceholderAPI (optional)
+- DiscordSRV (optional)
 
 ## Installation
 
@@ -69,6 +70,18 @@ Blocks console-only commands such as `/op`, `/stop` and `/seed` for every player
 
 Styles vanilla `/say` like the rest of the chat. Players still need the vanilla `minecraft.command.say` permission. Text from players is shown as plain text; text from the console and command blocks may use MiniMessage.
 
+### Rank badges
+
+Pixel-art rank badges (OWNER, ADMIN, MOD, ..., CONSOLE) are shipped as glyphs of a server resource pack, so they look the same at every GUI scale. Put `<badge:admin>` into a LuckPerms prefix or suffix, or into the chat, `/say` and private-message formats; `<badge:admin:ru-icon>` picks a variant (`en`, `en-icon`, `ru`, `ru-icon`), otherwise `badges.language` and `badges.icons` in `config.yml` decide. Until `badges.enabled` is turned on, and always in the server console, a badge is shown as a text label such as `[ADMIN]`. The pack is built from this repository, see [Rank badge resource pack](#rank-badge-resource-pack).
+
+### Console prefix
+
+The console has its own prefix and name, shown in `/say` and in private messages. By default the prefix is the CONSOLE badge. The console can `/msg` players, and players can answer it with `/reply`. Change the prefix with `/chat consoleprefix <prefix>` or in `config.yml`.
+
+### DiscordSRV
+
+With [DiscordSRV](https://modrinth.com/plugin/discordsrv) installed, global chat goes to Discord, and local chat can too (`discordsrv.local-chat`, off by default), into the same Discord channel or a separate one. Messages from Discord are shown in game with zoChat's own format (`formats.discord` in the messages file): the top Discord role in its colour, the name, the text and attachments as clickable links. Discord users get the same banned-words filter as players. Keep `RespectChatPlugins: true` in DiscordSRV's config, otherwise global chat reaches Discord twice.
+
 ### Join, quit and welcome messages
 
 Optional custom join and quit messages with sounds, plus a delayed welcome message for the joining player. With the custom messages turned off, vanilla join and quit messages are left as they are.
@@ -87,10 +100,11 @@ Every text players see, including the chat, private-message and join/quit format
 |---|---|---|---|
 | `/chat help` | `/zochat` | Command reference | none |
 | `/chat reload` | `/zochat` | Reload all configuration files | `zochat.admin` |
+| `/chat consoleprefix [prefix\|clear]` | `/zochat` | Show, set or remove the console prefix | `zochat.admin` |
 | `/global <message>` | `/g` | Send to global chat | `zochat.global` |
 | `/local <message>` | `/l` | Send to local chat | `zochat.local` |
-| `/msg <player> <message>` | `/m`, `/tell`, `/w` | Private message | `zochat.msg` |
-| `/reply <message>` | `/r` | Reply to the last private message | `zochat.msg` |
+| `/msg <player> <message>` | `/m`, `/tell`, `/w` | Private message (also from the console) | `zochat.msg` |
+| `/reply <message>` | `/r` | Reply to the last private message (also to or from the console) | `zochat.msg` |
 | `/bubble <message>` | `/b` | Show a bubble above your head | `zochat.bubble` |
 | `/chatlog <player>` | | Show a player's recent messages | `zochat.admin` |
 | `/chatlog clear` | | Delete the whole chat log | `zochat.admin` |
@@ -117,7 +131,7 @@ Every text players see, including the chat, private-message and join/quit format
 
 | File | Contents |
 |---|---|
-| `config.yml` | Language, cooldowns, banned words, mentions, channels, `/say`, database, join/quit, PlaceholderAPI |
+| `config.yml` | Language, cooldowns, banned words, mentions, channels, `/say`, console, badges, DiscordSRV, database, join/quit, PlaceholderAPI |
 | `messages/messages_<lang>.yml` | Every player-facing text, including chat, private-message and join/quit formats |
 | `placeholders.yml` | `^` placeholders and world display names |
 | `announcer.yml` | Announcers and announcement texts |
@@ -163,6 +177,23 @@ local-chat:
 global-chat:
   enabled: true
 
+console:
+  prefix: "<badge:console> "  # set in game with /chat consoleprefix
+  name: "Server"
+
+badges:
+  enabled: false             # turn on once players get the resource pack
+  language: auto             # auto (follows message:), en or ru
+  icons: true
+
+discordsrv:
+  enabled: true
+  global-channel: "global"   # DiscordSRV game channels (Channels: in its config.yml)
+  local-chat: false          # also send local chat to Discord
+  local-channel: "global"
+  discord-format: true       # zoChat formats Discord messages (formats.discord)
+  max-length: 256
+
 database:
   type: "sqlite"             # sqlite | mysql
   mysql:
@@ -176,7 +207,20 @@ database:
 ## Working with other plugins
 
 - Mute plugins: chat, `/g`, `/l` and `/bubble` all pass through the chat event, so a mute applies to all of them. `/msg` and `/reply` (with the aliases `/m`, `/tell`, `/w`, `/r`) are commands; add them to your mute plugin's list of blocked commands if it does not include them already.
+- Command conflicts: if another plugin, such as EssentialsX, already owns `/msg`, `/tell`, `/w`, `/m`, `/reply` or `/r`, the server sends the command to that plugin, and replies stop working with zoChat. Disable those commands in the other plugin (EssentialsX: `disabled-commands`) or use the prefixed forms `/zochat:msg` and `/zochat:r`.
 - PlaceholderAPI values used in formats are parsed as MiniMessage. Do not put placeholders that return player-typed text, such as nicknames, into formats.
+
+## Rank badge resource pack
+
+The badges are drawn by the generator in `tools/prefixgen`. It writes the resource pack and the character table the plugin reads (`src/main/resources/badges.yml`), so the plugin and a pack built from the same commit always match.
+
+```bash
+./gradlew :prefixgen:run
+```
+
+It writes one pack per style (`plate`, `neon`, `craft`, `ribbon`) to `tools/prefixgen/build/resourcepack/zochat-badges-<style>.zip` and prints the SHA-1 of each for `resource-pack-sha1` in `server.properties`. The packs are interchangeable, so serve whichever style you like; preview sheets of all of them are written to `tools/prefixgen/build/preview/`. Every GitHub release also carries the four packs next to the jar. Once a pack is served to players, set `badges.enabled: true`.
+
+Each badge keeps a fixed character forever, so adding ranks or switching styles never breaks prefixes that are already in use.
 
 ## Building from source
 

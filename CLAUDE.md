@@ -18,8 +18,12 @@ build/libs/zoChat-2.0.0.jar
 # Run test server (requires Minecraft assets downloaded by run-paper)
 ./gradlew runServer
 
-# Run tests only
+# Run tests only (plugin + generator; `./gradlew :test --tests ...` to filter the plugin's)
 ./gradlew test
+
+# Rank-badge resource pack + src/main/resources/badges.yml (one pack per style)
+./gradlew :prefixgen:run
+# -> tools/prefixgen/build/resourcepack/zochat-badges-<style>.zip for all four styles (+ SHA-1), build/preview/ sheets
 
 # Java 21 toolchain, Shadow plugin bundles MySQL driver into final JAR
 ```
@@ -78,9 +82,16 @@ zorahm.zochat
 │   ├── CommandGuard.kt               // pure blocked/allowed decision incl. namespace forms (unit-tested)
 │   └── CommandGuardListener.kt       // cancels blocked commands + hides them from tab completion
 ├── say/
-│   └── SayListener.kt                // reformats vanilla /say (player + console) like chat
+│   └── SayListener.kt                // reformats vanilla /say (player + console) like chat; console prefix
+├── discord/
+│   ├── DiscordBridge.kt              // what ChatService needs (relay); None when DiscordSRV is absent; gameChannel() routing
+│   ├── DiscordMessageFormat.kt       // Discord -> Minecraft line from formats.discord (pure, unit-tested)
+│   └── DiscordSrvHook.kt             // the ONLY place that touches DiscordSRV classes
+├── badge/
+│   ├── BadgeTable.kt                 // reads the generated badges.yml from the jar (id -> glyph char + labels)
+│   └── Badges.kt                     // <badge:id[:variant]> MiniMessage tag: glyph for players, [LABEL] for the console
 ├── privatemsg/
-│   ├── PrivateMessageService.kt      // /msg + /reply core, offline hand-off
+│   ├── PrivateMessageService.kt      // /msg + /reply core (players and the console), offline hand-off + delivery
 │   ├── MsgCommand.kt
 │   └── ReplyCommand.kt
 ├── presence/
@@ -91,7 +102,7 @@ zorahm.zochat
 │   ├── ChatLogRepository.kt          // chat_logs table
 │   └── OfflineMessageRepository.kt   // offline_messages table
 ├── command/
-│   ├── ChatCommand.kt                // /chat reload|help
+│   ├── ChatCommand.kt                // /chat reload|help|consoleprefix (+ tab completion)
 │   └── ChatLogCommand.kt             // /chatlog <player|clear>
 └── util/
     ├── Sounds.kt                     // safe Sound.valueOf -> Optional<Sound>
@@ -111,7 +122,7 @@ All chat messages (natural chat, /g, /l) go through a single `ChatService.send(p
 7. Chat log to DB (async)
 8. LuckPerms prefix/suffix via `PrefixFormatter.toMiniMessage()`, **inlined** into the format string (`formats.local-chat`/`formats.global-chat` from the messages file) (not inserted as closed components) so an unclosed colour/gradient in a suffix flows into `{player}`/`{message}`
 9. Build final Component: `{player}`/`{message}` stay components (player input was already escaped in step 3, so it never renders as MiniMessage) but inherit the open colour from the inlined prefix/suffix
-10. Route: LOCAL = players in radius (squared distance) + console, GLOBAL = `Bukkit.broadcast()`
+10. Route: LOCAL = players in radius (squared distance), GLOBAL = all online players; the console always gets its own copy. The message is built twice — with `badges.forPlayers` and `badges.forConsole` — and sent per audience instead of `Bukkit.broadcast()`, because a `<badge>` is a resource-pack glyph for players but must be a text label in the console
 
 `ChatListener.route()` (pure, unit-tested) decides the channel. With a forced intent (from `chatAs`) the command's channel wins and the text is taken literally (`/l !hi` stays local), `BUBBLE` only shows a bubble (`ChatService.sendBubble`: filter + `BUBBLE` cooldown). Otherwise: `!text` → GLOBAL, plain → LOCAL if local chat is on, else GLOBAL; a bare `!` is swallowed; `!` while `global-chat.enabled: false` is refused; with BOTH channels off zoChat leaves chat to vanilla.
 
@@ -130,6 +141,7 @@ SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All
 - `config.yml`: Behaviour only (channels, cooldowns, database, banned words, mention formats/permissions, join/quit toggles, PlaceholderAPI toggles) — no language-dependent text
 - `messages/messages_ru.yml` and `messages/messages_en.yml`: Every player-visible text, incl. the chat/PM/join/quit formats (`formats.*`) and mention action-bar notifications (`mention.notify*`). Both moved out of config.yml; `ChatConfig.customisedMovedTexts()` (unit-tested) carries values the admin changed from the old Russian defaults into the active language's file before `syncWithDefaults` drops the old keys. Language set via `config.yml: message: ru/en`
 - `welcome_messages/welcome_messages.yml`: Welcome messages shown on join
+- `badges.yml`: **generated** by `tools/prefixgen` into `src/main/resources` and read from the jar only (never copied to the data folder), so a plugin and a pack built from the same commit always agree. Don't edit by hand — rerun the generator
 - `placeholders.yml`: `^` placeholders — built-in + custom (PAPI-backed) + world-name translation
 - `announcer.yml`: Timed chat broadcasts (announcers + announcements-by-ID)
 - `bubble.yml`: Floating bubble chat (TextDisplay) settings
@@ -176,6 +188,18 @@ Matching uses a single regex built from all enabled aliases, **longest-first wit
 
 Modes: `exact`, `contains`, `smart` (default). Actions: `block` (default), `replace`. Normalization (removes separators, L33t speak, Cyrillic look-alikes) builds **runs** of a repeated letter; a run of 3+ in the message matches any count in the word, 1 vs 2 must match exactly (`asss` hits `ass`, `good` doesn't hit `god`). It is toggled by `banned-words.normalize` (default true). Detection keeps a position map back to the original text, so detect and censor share one match set — `replace` censors the matched original span (including bypass spans like `b a d`) and does NOT block. `smart` adds a word-boundary check on the original text (so `ass` does not match inside `class`). Supports `regex:` prefix. `normalize()` and `apply()` are public static (companion `@JvmStatic`) for testability.
 
+### DiscordSRV (discord/)
+
+zoChat cancels every `AsyncChatEvent`, and DiscordSRV skips cancelled chat (`RespectChatPlugins`, default true), so it never sees chat on its own. `ChatService` therefore hands each delivered message to `DiscordBridge.relay` — the text as players saw it (filtered, ^placeholders expanded), via `DiscordSRV.processChatMessage(player, text, gameChannel, cancelled = false, null)`. Global chat goes to `discordsrv.global-channel`; local chat only with `discordsrv.local-chat: true`, to `local-channel`. Third-party plugins can't register a DiscordSRV chat hook, so Discord -> Minecraft is taken over by cancelling `DiscordGuildMessagePreProcessEvent` (once per message, after DiscordSRV's own bot/role/link checks, before attachments are split into separate broadcasts) for the global game channel only, and broadcasting `formats.discord` (`DiscordMessageFormat`: name/text are plain components, attachments clickable, cut at `max-length`, banned-words filter applied). DiscordSRV events fire on JDA threads — hop to the main thread before messaging players. DiscordSRV is `compileOnly` with `isTransitive = false` (its jar already contains relocated JDA: `github.scarsz.discordsrv.dependencies.jda`) and a softdepend.
+
+### Rank Badges and the Console Prefix
+
+`tools/prefixgen` (Gradle subproject `:prefixgen`, plain Kotlin + java.awt, not shipped in the jar) draws 9 px pixel-art rank badges in four styles and builds the server resource pack: font `zochat:badges`, one bitmap glyph per badge, `ascent 8`, pack `min_format`/`max_format` 69 (1.21.9-1.21.10). Codepoints are **permanent**: `0xE000 + rank.slot * 4 + variant.offset` (variants en, en-icon, ru, ru-icon). Never renumber a slot — zoChat configs, LuckPerms prefixes and deployed packs refer to badges by that character. The pre-existing (old) generator elsewhere in the repo is off-limits — don't read or touch it.
+
+In the plugin, `<badge:id>` / `<badge:id:variant>` is a MiniMessage tag (`Badges`), passed as a resolver where formats are deserialized (ChatService for LuckPerms prefixes, SayListener, PrivateMessageService, `/chat consoleprefix` preview). The glyph resets colour to white, shadow to none and all decorations (bitmap glyphs are tinted by text colour and get chat's drop shadow). `badges.enabled: false` (default — players may not have the pack yet) and the console always get `[LABEL]` text instead. Unknown ids stay literal.
+
+The console speaks as `console.prefix` + `console.name` (config.yml; `say.console-name` is migrated by `ConfigFiles.renameKeys`): in `/say` (`{prefix}` token; a format without it gets the prefix in front) and in private messages — non-player senders of `/msg`/`/reply` write as the console, and players `/r` to it. The console is `PrivateMessageService.CONSOLE_ID` (`UUID(0,0)`) in the reply map and as an offline message's sender. `/chat consoleprefix <prefix|clear>` saves to config.yml (adds the trailing space) and shows a preview.
+
 ## Testing
 
 JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extendsFrom` trick (paper-api is `compileOnly`, extended into `testImplementation`).
@@ -184,11 +208,11 @@ JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extend
 ./gradlew test
 ```
 
-Current tests: PrefixFormatterTest (legacy code parsing, decoration reset), BannedWordsFilterTest (normalization + run matching), PlaceholderMatchTest (`buildPattern` longest-first matching), MentionPatternTest (whole-word @everyone/@here), ChatRouteTest (`!`/channel routing, forced intents), PapiPlayerTextTest (`PapiHook.expandEscaped`/`expandColored`), MovedTextsTest (config.yml -> messages migration), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced/`execute run` decisions), StorageTest (repositories on a real SQLite file — `sqlite-jdbc` is a testImplementation dep since Paper only provides it at runtime).
+Current tests: PrefixFormatterTest (legacy code parsing, decoration reset), BannedWordsFilterTest (normalization + run matching), PlaceholderMatchTest (`buildPattern` longest-first matching), MentionPatternTest (whole-word @everyone/@here), ChatRouteTest (`!`/channel routing, forced intents), PapiPlayerTextTest (`PapiHook.expandEscaped`/`expandColored`), MovedTextsTest (config.yml -> messages migration), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced/`execute run` decisions), BadgesTest (`<badge>` tag against the generated badges.yml), DiscordBridgeTest (channel routing, Discord line format), ConfigFilesTest (`renameKeys`), BundledResourcesTest (every bundled YAML parses; ru/en key parity), StorageTest (repositories on a real SQLite file — `sqlite-jdbc` is a testImplementation dep since Paper only provides it at runtime). Generator: `tools/prefixgen` BadgeGlyphsTest (fixed codepoints, font JSON, badges.yml).
 
 ## CI
 
-`.github/workflows/build.yml` builds every push/PR with `./gradlew clean build` and uploads the JAR as a run artifact. `.github/workflows/release.yml` rebuilds on a `v*` tag (or a published release) and attaches the JAR to that GitHub Release.
+`.github/workflows/build.yml` builds every push/PR with `./gradlew clean build` and uploads the JAR as a run artifact. `.github/workflows/release.yml` rebuilds on a `v*` tag (or a published release), runs `:prefixgen:run` and attaches the JAR plus the four `zochat-badges-<style>.zip` packs to that GitHub Release. The build fails if the committed `badges.yml` differs from what the generator writes (`BadgeGlyphsTest.committedTableMatchesTheGenerator`), so the jar and the packs always agree.
 
 The wrapper needs its executable bit **in git**, or the runner fails with `./gradlew: Permission denied` — Windows checkouts drop it, so re-add it with `git update-index --chmod=+x gradlew` if it is ever lost.
 
@@ -204,6 +228,7 @@ The wrapper needs its executable bit **in git**, or the runner fails with `./gra
 - `PlayerCommandPreprocessEvent` fires **before** Bukkit's permission check — a listener that takes over a command (`SayListener` for /say) must check the command's permission itself
 - DDL is per dialect — `AUTOINCREMENT` is SQLite-only and MySQL can't index TEXT; branch on `Database.isMysql`
 - LuckPerms legacy codes → `PrefixFormatter` (never `miniMessage.deserialize()` directly)
+- DiscordSRV classes only in `DiscordSrvHook` (constructed only when DiscordSRV is enabled), like PlaceholderAPI in `PapiHook`
 - MySQL driver is relocated by Shadow — explicit `Class.forName("zorahm.zochat.libs.mysql.cj.jdbc.Driver")` in Database.kt
 
 ## Code Style
