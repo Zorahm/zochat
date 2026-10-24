@@ -1,185 +1,182 @@
 # zoChat
 
-![GitHub](https://img.shields.io/github/license/Zorahm/zoChat) ![GitHub Release](https://img.shields.io/github/v/release/Zorahm/zoChat)
+![License](https://img.shields.io/github/license/Zorahm/zoChat) ![Release](https://img.shields.io/github/v/release/Zorahm/zoChat)
 
-A Paper plugin that adds local/global chat, private messaging, player mentions, timed announcements, bubble chat and chat logging to Minecraft servers. Integrates with LuckPerms for prefix/suffix display and uses the Adventure API (MiniMessage) for rich text formatting.
-
----
-
-## Features
-
-- **Local and global chat**
-  - Local chat (default) — messages visible within a configurable radius.
-  - Global chat (prefix `!` or `/g`) — messages visible to all players.
-  - Commands `/l` and `/g` for explicit channel selection.
-- **Player mentions**
-  - `@PlayerName` with partial name matching, max 5 per message.
-  - `@everyone` / `@here` with permission checks and radius limits.
-  - Sound and action bar notifications for mentioned players.
-- **Private messages**
-  - `/msg` and `/reply`, with offline delivery on next join.
-- **Anti-spam and filtering**
-  - Per-channel cooldowns (local / global / private, configured in seconds).
-  - Banned words filter with `exact`, `contains` and `smart` modes, `block` or `replace` action, plus `regex:` entries.
-- **In-chat placeholders**
-  - `^loc`, `^world`, `^time`, `^health`, `^ping`, `^biome`, `^item` with aliases, per-placeholder permissions and custom PlaceholderAPI-backed entries — all configured in `placeholders.yml`.
-- **PlaceholderAPI integration** (optional)
-  - Expands `%...%` in chat formats, and optionally in player-typed messages (opt-in).
-  - Registers its own expansion: `%zochat_version%`, `%zochat_local_radius%`, `%zochat_here_radius%`, `%zochat_cooldown_local%`, `%zochat_cooldown_global%`.
-- **Announcer**
-  - Timed broadcasts on independent timers, sequential or random rotation, configured in `announcer.yml`.
-- **Bubble chat**
-  - Floating `TextDisplay` above the player's head on chat and/or `/bubble`, configured in `bubble.yml`.
-- **Command guard**
-  - Blocks console-only commands (`/op`, `/stop`, `/seed`, …) for players, including `minecraft:`-namespaced bypasses, configured in `commands.yml`.
-- **`/say` formatting**
-  - Styles vanilla `/say` output like the rest of the chat, for both players and console.
-- **LuckPerms integration**
-  - Prefixes and suffixes are rendered from legacy colour codes *and* MiniMessage tags, so an open colour in a suffix carries into the message.
-- **Chat logging**
-  - SQLite (default) or MySQL backend, all writes async.
-- **Localization**
-  - Russian and English message files; extensible via `messages_<lang>.yml`.
-
----
+zoChat is a chat plugin for Paper servers. It splits chat into local and global channels, adds private messages with offline delivery, mentions, in-chat placeholders, timed announcements, chat bubbles above players' heads and a chat log. Formatting uses MiniMessage throughout, and LuckPerms prefixes and suffixes work whether they are written with legacy colour codes or MiniMessage tags.
 
 ## Requirements
 
-- Paper 1.21.10 (or a compatible fork)
+- Paper 1.21.10 or a compatible fork
 - Java 21
-- LuckPerms 5.4+ (required)
+- LuckPerms 5.4 or newer (required)
 - PlaceholderAPI (optional)
-
----
 
 ## Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/Zorahm/zoChat/releases).
-2. Place `zoChat-2.0.0.jar` into your server's `plugins/` directory.
-3. Restart the server.
-4. Configure via the files in `plugins/zoChat/` (see below), then run `/chat reload`.
+1. Download `zoChat-<version>.jar` from [GitHub Releases](https://github.com/Zorahm/zoChat/releases).
+2. Put it into the server's `plugins/` folder and restart the server.
+3. Edit the files in `plugins/zoChat/` and apply the changes with `/chat reload`.
 
----
+When an update adds new settings, they are merged into your existing files; your values are kept.
+
+## Features
+
+### Local and global chat
+
+Plain chat goes to players within `local-chat.radius` blocks. A message that starts with `!` goes to the whole server. `/l` and `/g` pick the channel explicitly. If local chat is disabled, plain chat goes global; if both channels are disabled, zoChat leaves chat to vanilla.
+
+`/g`, `/l` and `/bubble` are sent through the regular chat event, so mute, anti-spam and chat-logging plugins treat them exactly like typed chat.
+
+### Mentions
+
+- `@Name` mentions a player; a unique prefix of the name is enough. Up to 5 players per message.
+- `@everyone` (aliases `@all`, `@все`) and `@here` (alias `@здесь`, players within `mention.here-radius`) need their own permissions.
+- Mentioned players hear a sound and get an action-bar notice. Only players who actually receive the message are notified, so a mention in local chat does not reach the other end of the map.
+- Vanished players cannot be mentioned or tab-completed.
+
+### Private messages
+
+`/msg` and `/reply`. A message to an offline player is stored and delivered when they join; `/reply` to someone who has left goes the same way. Vanished players are treated as offline.
+
+### Anti-spam and word filter
+
+- Separate cooldowns for local chat, global chat, private messages and `/bubble`, in seconds.
+- The banned-words filter has three modes (`exact`, `contains`, `smart`) and two actions (`block`, `replace`), and accepts `regex:` entries. Normalization catches common bypasses: spaced-out letters, l33t digits, Cyrillic look-alikes and stretched letters (`baaad`). In `smart` mode a word only matches on word boundaries, so `ass` does not fire inside `class`.
+
+### In-chat placeholders
+
+Players can drop `^loc`, `^world`, `^time`, `^health`, `^ping`, `^biome` and `^item` into a message, each with aliases and its own permission. Custom `^` placeholders backed by PlaceholderAPI and display names for worlds are configured in `placeholders.yml`.
+
+### PlaceholderAPI
+
+- `%...%` placeholders are expanded in chat formats, announcements, bubbles and `/say`.
+- Expanding placeholders that players type themselves is opt-in and permission-gated.
+- zoChat registers its own placeholders: `%zochat_version%`, `%zochat_local_radius%`, `%zochat_here_radius%`, `%zochat_cooldown_local%`, `%zochat_cooldown_global%`.
+
+### Announcer
+
+Timed broadcasts with any number of announcers, each on its own interval, in sequential or random order, with optional sound, permission and world filters. Configured in `announcer.yml`.
+
+### Chat bubbles
+
+A floating text display above the player's head on chat, on `/bubble`, or both. Size, background, duration and visibility are set in `bubble.yml`.
+
+### Command guard
+
+Blocks console-only commands such as `/op`, `/stop` and `/seed` for every player, operators included. Namespaced forms (`/minecraft:op`) and commands wrapped in `/execute ... run` are caught too, and blocked commands are hidden from tab completion. Only players with `zochat.command.bypass` can run them; nobody has it by default. Note that the LuckPerms `*` wildcard grants it as well. The list is in `commands.yml`.
+
+### /say formatting
+
+Styles vanilla `/say` like the rest of the chat. Players still need the vanilla `minecraft.command.say` permission. Text from players is shown as plain text; text from the console and command blocks may use MiniMessage.
+
+### Join, quit and welcome messages
+
+Optional custom join and quit messages with sounds, plus a delayed welcome message for the joining player. With the custom messages turned off, vanilla join and quit messages are left as they are.
+
+### Chat log
+
+Every chat message is stored in SQLite (default) or MySQL. All database work runs off the main thread. `/chatlog <player>` shows a player's latest messages.
+
+### Localization
+
+Every text players see, including the chat, private-message and join/quit formats, lives in `messages/messages_ru.yml` and `messages/messages_en.yml`. Pick the language with `message:` in `config.yml`.
 
 ## Commands
 
 | Command | Aliases | Description | Permission |
 |---|---|---|---|
-| `/chat reload` | `/zochat` | Reload configuration and messages | `zochat.admin` |
-| `/chat help` | `/zochat` | Show command reference | all players |
-| `/msg <player> <message>` | `/m`, `/tell`, `/w` | Send a private message | `zochat.msg` |
+| `/chat help` | `/zochat` | Command reference | none |
+| `/chat reload` | `/zochat` | Reload all configuration files | `zochat.admin` |
+| `/global <message>` | `/g` | Send to global chat | `zochat.global` |
+| `/local <message>` | `/l` | Send to local chat | `zochat.local` |
+| `/msg <player> <message>` | `/m`, `/tell`, `/w` | Private message | `zochat.msg` |
 | `/reply <message>` | `/r` | Reply to the last private message | `zochat.msg` |
-| `/local <message>` | `/l` | Send a message to local chat | `zochat.local` |
-| `/global <message>` | `/g` | Send a message to global chat | `zochat.global` |
 | `/bubble <message>` | `/b` | Show a bubble above your head | `zochat.bubble` |
-| `/chatlog <player\|clear>` | — | View or clear chat logs | `zochat.admin` |
-
----
+| `/chatlog <player>` | | Show a player's recent messages | `zochat.admin` |
+| `/chatlog clear` | | Delete the whole chat log | `zochat.admin` |
 
 ## Permissions
 
-| Permission | Description | Default |
+| Permission | Grants | Default |
 |---|---|---|
-| `zochat.admin` | Admin commands (`/chat reload`, `/chatlog`) | op |
-| `zochat.local` | Use local chat | true |
-| `zochat.global` | Use global chat | true |
-| `zochat.msg` | Send private messages | true |
-| `zochat.bubble` | Use `/bubble` | true |
-| `zochat.spam.bypass` | Bypass anti-spam cooldowns | op |
-| `zochat.command.bypass` | Run commands blocked by the command guard | op |
-| `zochat.stealth.join` | Hide join message | op |
-| `zochat.stealth.quit` | Hide quit message | op |
-| `zochat.mention.everyone` | Use `@everyone` | op |
-| `zochat.mention.here` | Use `@here` | op |
-| `zochat.placeholder.loc` (also `.world`, `.time`, `.health`, `.ping`, `.biome`, `.item`) | Use the matching `^` placeholder | true |
+| `zochat.admin` | `/chat reload`, `/chatlog` | op |
+| `zochat.local` | Local chat (plain chat and `/local`) | everyone |
+| `zochat.global` | Global chat (`!` prefix and `/global`) | everyone |
+| `zochat.msg` | `/msg` and `/reply` | everyone |
+| `zochat.bubble` | `/bubble` | everyone |
+| `zochat.spam.bypass` | Skip anti-spam cooldowns | op |
+| `zochat.command.bypass` | Run commands blocked by the command guard | nobody |
+| `zochat.stealth.join` | Join without a join message | op |
+| `zochat.stealth.quit` | Leave without a quit message | op |
+| `zochat.mention.everyone` | `@everyone` | op |
+| `zochat.mention.here` | `@here` | op |
+| `zochat.placeholder.<name>` | The matching `^` placeholder (`loc`, `world`, `time`, `health`, `ping`, `biome`, `item`) | everyone |
 | `zochat.placeholder.papi` | Expand `%...%` in your own messages | op |
 
----
-
-## Configuration
+## Configuration files
 
 | File | Contents |
 |---|---|
-| `config.yml` | Chat formats, cooldowns, banned words, mentions, `/say`, database, join/quit, PlaceholderAPI |
-| `placeholders.yml` | `^` placeholders — built-in, custom (PlaceholderAPI-backed), world-name translation |
-| `announcer.yml` | Announcers and announcement bodies |
-| `bubble.yml` | Bubble chat (TextDisplay) settings |
-| `commands.yml` | Console-only command list for the command guard |
-| `messages/messages_ru.yml`, `messages/messages_en.yml` | Player-facing strings; language selected by `message:` in `config.yml` |
-| `welcome_messages/welcome_messages.yml` | Welcome messages shown on join |
+| `config.yml` | Language, cooldowns, banned words, mentions, channels, `/say`, database, join/quit, PlaceholderAPI |
+| `messages/messages_<lang>.yml` | Every player-facing text, including chat, private-message and join/quit formats |
+| `placeholders.yml` | `^` placeholders and world display names |
+| `announcer.yml` | Announcers and announcement texts |
+| `bubble.yml` | Chat bubble settings |
+| `commands.yml` | Commands blocked by the command guard |
+| `welcome_messages/welcome_messages.yml` | Welcome message for joining players |
 
-New keys added by plugin updates are merged into your existing files without overwriting your values.
+### Formats
 
-### `config.yml` (excerpt)
+Formats are MiniMessage strings: HEX colours (`<#ff5555>`), gradients (`<gradient:#55ff55:#aaffaa>`) and the tokens `{prefix}`, `{suffix}`, `{player}` and `{message}`. From `messages_en.yml`:
 
 ```yaml
-# Language: ru or en
-message: ru
+formats:
+  local-chat: "<gradient:#55ff55:#aaffaa>[Local]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+  global-chat: "<gradient:#ffaa33:#ffd700>[Global]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+```
+
+The prefix and suffix are inserted without being closed, so a colour left open in a suffix carries over into the message. Everything players type is escaped: they cannot add colours, hover text or clickable commands to chat, private messages, bubbles or item names shown with `^item`.
+
+### config.yml (excerpt)
+
+```yaml
+message: en                  # ru or en
 
 anti-spam:
   enabled: true
-  local-cooldown: 3        # seconds
-  global-cooldown: 5       # seconds
-  private-cooldown: 2      # seconds
-  bypass-permission: "zochat.spam.bypass"
+  local-cooldown: 3          # seconds
+  global-cooldown: 5
+  private-cooldown: 2
+  bubble-cooldown: 3
 
 banned-words:
   enabled: true
-  mode: "smart"            # exact | contains | smart
-  action: "block"          # block | replace
-  normalize: true          # catch l33t / spaced-out / look-alike bypasses
-  words: []                # e.g. ["badword", "regex:\\b\\d{4}\\b"]
+  mode: "smart"              # exact | contains | smart
+  action: "block"            # block | replace
+  normalize: true
+  words: []                  # e.g. ["badword", "regex:\\b\\d{4}-\\d{4}\\b"]
 
 local-chat:
   enabled: true
   radius: 50
-  format: "<gradient:#55ff55:#aaffaa>[Local]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> > </#c0c0c0>{message}"
 
 global-chat:
   enabled: true
-  format: "<gradient:#ffaa33:#ffd700>[Global]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> > </#c0c0c0>{message}"
-
-say:
-  enabled: true
-  console-name: "Server"
-  format: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>></#c0c0c0> <white>{message}</white>"
-
-private-messages:
-  format: "<gradient:#f6a0d3:#b47ee5>PM from {player}:</gradient> <white>{message}</white>"
-  reply-format: "<gradient:#b47ee5:#f6a0d3>You -> {player}:</gradient> <white>{message}</white>"
 
 database:
-  type: "sqlite"           # sqlite | mysql
+  type: "sqlite"             # sqlite | mysql
   mysql:
     host: "localhost"
     port: 3306
     database: "minecraft_chat"
     username: "root"
     password: "password"
-
-placeholder-api:
-  enabled: true
-  format: true             # expand %...% in chat formats (admin-controlled)
-  player-messages: false   # expand %...% players type themselves (opt-in, abuse risk)
-  player-permission: "zochat.placeholder.papi"
 ```
 
-Chat formats use MiniMessage: HEX colours (`<#ff5555>`), gradients (`<gradient:#55ff55:#aaffaa>`) and the tokens `{prefix}`, `{suffix}`, `{player}`, `{message}`. Text players type is escaped, so nobody can inject colours or clickable commands through chat.
+## Working with other plugins
 
-### `messages/messages_en.yml` (excerpt)
-
-```yaml
-errors:
-  only-players: "<red>This command is for players only!</red>"
-  no-permission: "<red>You do not have permission to do that!</red>"
-
-chat:
-  spam-warning: "<red>Don't spam! Wait a bit before sending another message.</red>"
-  banned-word: "<red>Message contains banned words!</red>"
-  local-disabled: "<red>Local chat is disabled on the server!</red>"
-```
-
----
+- Mute plugins: chat, `/g`, `/l` and `/bubble` all pass through the chat event, so a mute applies to all of them. `/msg` and `/reply` (with the aliases `/m`, `/tell`, `/w`, `/r`) are commands; add them to your mute plugin's list of blocked commands if it does not include them already.
+- PlaceholderAPI values used in formats are parsed as MiniMessage. Do not put placeholders that return player-typed text, such as nicknames, into formats.
 
 ## Building from source
 
@@ -187,15 +184,11 @@ chat:
 ./gradlew clean build
 ```
 
-Output: `build/libs/zoChat-2.0.0.jar`
-
-Run the test suite:
+The plugin jar is written to `build/libs/zoChat-<version>.jar`. To run only the tests:
 
 ```bash
 ./gradlew test
 ```
-
----
 
 ## License
 
