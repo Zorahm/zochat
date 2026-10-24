@@ -103,11 +103,17 @@ class ChatConfig(private val plugin: JavaPlugin) {
             "{prefix}<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
         ) ?: "{prefix}<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
 
+    val consoleSayFormat: String
+        get() = consoleSayFormat(cfg, sayFormat)
+
     val consolePrefix: String
         get() = cfg.getString("console.prefix", "<badge:console> ") ?: ""
 
     val consoleName: String
         get() = cfg.getString("console.name", "Server") ?: "Server"
+
+    val consoleDisplay: String
+        get() = consoleDisplay(consolePrefix, consoleName)
 
     /** Saves to config.yml right away; the getters read the same live config, so it applies at once. */
     fun setConsolePrefix(prefix: String) {
@@ -236,6 +242,15 @@ class ChatConfig(private val plugin: JavaPlugin) {
     private class MovedText(val newKey: String, val oldDefault: String)
 
     companion object {
+        /** How the console is named in private messages; trimmed so a blank name leaves no dangling space. */
+        @JvmStatic
+        fun consoleDisplay(prefix: String, name: String): String = (prefix + name).trimEnd()
+
+        /** `say.console-format`, or [sayFormat] while it is blank, so an upgrade keeps the old look. */
+        @JvmStatic
+        fun consoleSayFormat(config: ConfigurationSection, sayFormat: String): String =
+            config.getString("say.console-format").orEmpty().ifBlank { sayFormat }
+
         /** New messages key -> text, for every moved config.yml key the admin changed from its old default. */
         @JvmStatic
         fun customisedMovedTexts(config: ConfigurationSection): Map<String, String> =

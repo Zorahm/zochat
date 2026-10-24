@@ -234,7 +234,7 @@ class PrivateMessageService(
     private fun outgoing(to: String, body: Component, tags: TagResolver): Component =
         line("formats.private-message-reply", to, body, tags)
 
-    private fun consoleDisplay(): String = config.consolePrefix + config.consoleName
+    private fun consoleDisplay(): String = config.consoleDisplay
 
     companion object {
         /** Stands in for the console in the reply map and as an offline message's sender. */

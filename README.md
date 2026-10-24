@@ -70,13 +70,15 @@ Blocks console-only commands such as `/op`, `/stop` and `/seed` for every player
 
 Styles vanilla `/say` like the rest of the chat. Players still need the vanilla `minecraft.command.say` permission. Text from players is shown as plain text; text from the console and command blocks may use MiniMessage.
 
+`say.console-format` gives the console, command blocks and RCON a format of their own; leave it blank to share `say.format` with players. For example `"{prefix}<#c0c0c0>›</#c0c0c0> <white>{message}</white>"` shows only the console badge, without the console name.
+
 ### Rank badges
 
 Pixel-art rank badges (OWNER, ADMIN, MOD, ..., CONSOLE) are shipped as glyphs of a server resource pack, so they look the same at every GUI scale. Put `<badge:admin>` into a LuckPerms prefix or suffix, or into the chat, `/say` and private-message formats; `<badge:admin:ru-icon>` picks a variant (`en`, `en-icon`, `ru`, `ru-icon`), otherwise `badges.language` and `badges.icons` in `config.yml` decide. Until `badges.enabled` is turned on, and always in the server console, a badge is shown as a text label such as `[ADMIN]`. The pack is built from this repository, see [Rank badge resource pack](#rank-badge-resource-pack).
 
 ### Console prefix
 
-The console has its own prefix and name, shown in `/say` and in private messages. By default the prefix is the CONSOLE badge. The console can `/msg` players, and players can answer it with `/reply`. Change the prefix with `/chat consoleprefix <prefix>` or in `config.yml`.
+The console has its own prefix and name, shown in `/say` and in private messages. By default the prefix is the CONSOLE badge. The console can `/msg` players, and players can answer it with `/reply`. Change the prefix with `/chat consoleprefix <prefix>` or in `config.yml`. Leave `console.name` blank to show only the prefix in private messages.
 
 ### DiscordSRV
 

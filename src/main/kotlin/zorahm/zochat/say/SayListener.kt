@@ -73,7 +73,7 @@ class SayListener(
     private fun broadcastFromConsole(rawMessage: String) {
         // Console/command blocks are trusted: their MiniMessage tags are kept so coloured
         // announcements work — that's the whole point of formatting /say for admins.
-        deliver { tags -> render(config.sayFormat, config.consolePrefix, config.consoleName, rawMessage, tags) }
+        deliver { tags -> render(config.consoleSayFormat, config.consolePrefix, config.consoleName, rawMessage, tags) }
     }
 
     // Not Bukkit.broadcast(): one component for everyone would hand the console the badge glyph,

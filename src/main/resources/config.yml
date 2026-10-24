@@ -63,13 +63,16 @@ say:
   # Tokens: {prefix} (console prefix; put in front when missing), {player}, {message}.
   # Player /say escapes the text (no injection); console /say parses it as MiniMessage.
   format: "{prefix}<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
+  # Format for /say from the console, command blocks and RCON. Blank = use format above.
+  # E.g. "{prefix}<#c0c0c0>›</#c0c0c0> <white>{message}</white>" shows only the console badge, without the name.
+  console-format: ""
 
 # ───── Console ─────
 # How the console appears in /say and in private messages (/msg and /reply from the console).
 console:
   # MiniMessage. Set in game with /chat consoleprefix <prefix|clear>.
   prefix: "<badge:console> "
-  name: "Server"
+  name: "Server"                       # blank = show only the prefix, e.g. just the badge
 
 # ───── Rank badges ─────
 # <badge:id> inserts a badge from the zoChat resource pack (built by tools/prefixgen), e.g. <badge:admin>

@@ -65,7 +65,7 @@ class ChatCommand(
         }
         // The preview is the console exactly as players (or, for the console itself, the log) see it.
         val tags = if (sender is Player) badges.forPlayers else badges.forConsole
-        val preview = mm.deserialize(config.consolePrefix + config.consoleName, tags)
+        val preview = mm.deserialize(config.consoleDisplay, tags)
         sender.sendMessage(
             mm.deserialize(config.messagePrefix + messages.get(key))
                 .replaceText { it.matchLiteral("{preview}").replacement(preview) }
