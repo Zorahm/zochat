@@ -4,6 +4,7 @@ import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
+import zorahm.zochat.discord.DiscordBridge
 import java.io.File
 import java.io.IOException
 
@@ -19,6 +20,8 @@ class ChatConfig(private val plugin: JavaPlugin) {
         plugin.saveDefaultConfig()
         val configFile = File(plugin.dataFolder, "config.yml")
         migrateMovedTexts(configFile)
+        // The console name moved out of say: since the console also sends private messages.
+        ConfigFiles.renameKeys(configFile, mapOf("say.console-name" to "console.name"))
         ConfigFiles.syncWithDefaults(plugin, "config.yml", configFile)
         plugin.reloadConfig()
         this.cfg = plugin.config
@@ -97,11 +100,50 @@ class ChatConfig(private val plugin: JavaPlugin) {
     val sayFormat: String
         get() = cfg.getString(
             "say.format",
-            "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
-        ) ?: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
+            "{prefix}<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
+        ) ?: "{prefix}<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
 
-    val sayConsoleName: String
-        get() = cfg.getString("say.console-name", "Server") ?: "Server"
+    val consolePrefix: String
+        get() = cfg.getString("console.prefix", "<badge:console> ") ?: ""
+
+    val consoleName: String
+        get() = cfg.getString("console.name", "Server") ?: "Server"
+
+    /** Saves to config.yml right away; the getters read the same live config, so it applies at once. */
+    fun setConsolePrefix(prefix: String) {
+        cfg.set("console.prefix", prefix)
+        plugin.saveConfig()
+    }
+
+    val isBadgesEnabled: Boolean
+        get() = cfg.getBoolean("badges.enabled", false)
+
+    // "auto" follows the plugin language, so a Russian server gets Russian badges without extra setup.
+    val isBadgesRussian: Boolean
+        get() = when (cfg.getString("badges.language", "auto")?.lowercase()) {
+            "ru" -> true
+            "en" -> false
+            else -> Messages.languageOf(messageLanguage) == "ru"
+        }
+
+    val isBadgeIconsEnabled: Boolean
+        get() = cfg.getBoolean("badges.icons", true)
+
+    val isDiscordEnabled: Boolean
+        get() = cfg.getBoolean("discordsrv.enabled", true)
+
+    val discordSettings: DiscordBridge.Settings
+        get() = DiscordBridge.Settings(
+            globalChannel = cfg.getString("discordsrv.global-channel", "global") ?: "global",
+            localChat = cfg.getBoolean("discordsrv.local-chat", false),
+            localChannel = cfg.getString("discordsrv.local-channel", "global") ?: "global",
+        )
+
+    val isDiscordFormatEnabled: Boolean
+        get() = cfg.getBoolean("discordsrv.discord-format", true)
+
+    val discordMaxLength: Int
+        get() = cfg.getInt("discordsrv.max-length", 256).coerceAtLeast(1)
 
     val databaseType: String
         get() = cfg.getString("database.type", "sqlite") ?: "sqlite"

@@ -60,9 +60,25 @@ global-chat:
 # ───── /say formatting ─────
 say:
   enabled: true                        # Format vanilla /say output like chat (off = untouched)
-  console-name: "Server"               # {player} name for /say from console/command blocks
-  # Tokens: {player}, {message}. Player /say escapes the text (no injection); console /say parses it as MiniMessage.
-  format: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
+  # Tokens: {prefix} (console prefix; put in front when missing), {player}, {message}.
+  # Player /say escapes the text (no injection); console /say parses it as MiniMessage.
+  format: "{prefix}<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
+
+# ───── Console ─────
+# How the console appears in /say and in private messages (/msg and /reply from the console).
+console:
+  # MiniMessage. Set in game with /chat consoleprefix <prefix|clear>.
+  prefix: "<badge:console> "
+  name: "Server"
+
+# ───── Rank badges ─────
+# <badge:id> inserts a badge from the zoChat resource pack (built by tools/prefixgen), e.g. <badge:admin>
+# in a LuckPerms prefix or <badge:console> above. <badge:admin:ru-icon> picks a variant: en, en-icon, ru, ru-icon.
+# The console always gets a text label like [ADMIN] instead of the glyph.
+badges:
+  enabled: false                       # true once players get the resource pack; false = text labels for everyone
+  language: auto                       # auto (follows message:), en or ru
+  icons: true                          # badges with the rank icon
 
 # ───── Offline message settings ─────
 offline-messages:
@@ -77,6 +93,19 @@ database:
     database: "minecraft_chat"           # Database name
     username: "root"                     # Username for connection
     password: "password"                 # Database password
+
+# ───── DiscordSRV ─────
+# Needs the DiscordSRV plugin. zoChat cancels chat events, so DiscordSRV can't pick chat up on its
+# own; zoChat hands each message over instead. Keep DiscordSRV's RespectChatPlugins: true, or global
+# chat reaches Discord twice. Channel names are DiscordSRV game channels (Channels: in its config.yml).
+discordsrv:
+  enabled: true                        # send chat to Discord and format Discord messages
+  global-channel: "global"             # game channel for global chat
+  local-chat: false                    # also send local chat to Discord
+  local-channel: "global"              # game channel for local chat; map a separate one to keep them apart
+  discord-format: true                 # format Discord -> Minecraft messages with formats.discord (messages_*.yml);
+                                       # false = leave them to DiscordSRV's own DiscordToMinecraft format
+  max-length: 256                      # longer Discord messages are cut
 
 # ───── Join and quit message settings ─────
 join-message:

@@ -2,6 +2,7 @@ package zorahm.zochat.say
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -9,6 +10,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.server.ServerCommandEvent
+import zorahm.zochat.badge.Badges
 import zorahm.zochat.chat.PapiHook
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.guard.CommandGuard
@@ -17,12 +19,13 @@ import zorahm.zochat.guard.CommandGuard
  * Replaces vanilla /say's plain white output with the plugin's MiniMessage formatting so it reads
  * like chat. Vanilla /say is a Brigadier command that never fires the chat events, so we intercept
  * the command itself: [PlayerCommandPreprocessEvent] for players, [ServerCommandEvent] for console,
- * command blocks and RCON. The original is cancelled and we broadcast our own component instead
- * (Bukkit.broadcast reaches every player plus the console, so nothing is lost).
+ * command blocks and RCON. The original is cancelled and we send our own component to every player
+ * and the console instead, so nothing is lost.
  */
 class SayListener(
     private val config: ChatConfig,
     private val papi: PapiHook,
+    private val badges: Badges,
 ) : Listener {
 
     private val mm = MiniMessage.miniMessage()
@@ -64,27 +67,38 @@ class SayListener(
         }
         // Player text is untrusted: escape so typed <...> never renders as MiniMessage (no colour
         // or <click:run_command> injection), exactly like the chat pipeline does.
-        Bukkit.getServer().broadcast(render(format, sender.name, mm.escapeTags(rawMessage)))
+        deliver { tags -> render(format, "", sender.name, mm.escapeTags(rawMessage), tags) }
     }
 
     private fun broadcastFromConsole(rawMessage: String) {
         // Console/command blocks are trusted: their MiniMessage tags are kept so coloured
         // announcements work — that's the whole point of formatting /say for admins.
-        Bukkit.getServer().broadcast(render(config.sayFormat, config.sayConsoleName, rawMessage))
+        deliver { tags -> render(config.sayFormat, config.consolePrefix, config.consoleName, rawMessage, tags) }
     }
 
-    private fun render(format: String, name: String, message: String): Component {
+    // Not Bukkit.broadcast(): one component for everyone would hand the console the badge glyph,
+    // which it can't draw — the console gets text labels instead.
+    private fun deliver(build: (TagResolver) -> Component) {
+        val toPlayers = build(badges.forPlayers)
+        Bukkit.getOnlinePlayers().forEach { it.sendMessage(toPlayers) }
+        Bukkit.getConsoleSender().sendMessage(build(badges.forConsole))
+    }
+
+    private fun render(format: String, prefix: String, name: String, message: String, tags: TagResolver): Component {
         // Splice into the format STRING before parsing, not replaceText on the built component: a
         // {player}/{message} sitting inside a <gradient> is split per-character in the component,
         // so replaceText can't find the whole literal token and leaves it raw. Names use the safe
-        // account charset and the player message is pre-escaped, so string splicing injects nothing.
-        // {message} is substituted last so a {player}/{prefix} typed inside a message stays literal.
-        val spliced = format
-            .replace("{prefix}", "")
+        // account charset, the prefix is admin config and the player message is pre-escaped, so
+        // string splicing injects nothing. {message} is substituted last so a {player}/{prefix}
+        // typed inside a message stays literal.
+        // A format from before {prefix} existed still shows the console prefix — in front.
+        val withPrefix = if ("{prefix}" in format) format else "{prefix}$format"
+        val spliced = withPrefix
+            .replace("{prefix}", prefix)
             .replace("{suffix}", "")
             .replace("{player}", name)
             .replace("{message}", message)
-        return mm.deserialize(spliced)
+        return mm.deserialize(spliced, tags)
     }
 
     private companion object {

@@ -18,6 +18,22 @@ object ConfigFiles {
         }
     }
 
+    // Moves values from renamed keys to their new names before syncWithDefaults deletes the old ones
+    // as obsolete. A new key the admin already set wins; the old key is dropped either way.
+    @JvmStatic
+    fun renameKeys(target: File, renames: Map<String, String>) {
+        if (!target.exists()) return
+        val current = YamlConfiguration.loadConfiguration(target)
+        var changed = false
+        for ((oldKey, newKey) in renames) {
+            if (!current.contains(oldKey) || current.isConfigurationSection(oldKey)) continue
+            if (!current.contains(newKey)) current.set(newKey, current.get(oldKey))
+            current.set(oldKey, null)
+            changed = true
+        }
+        if (changed) current.save(target)
+    }
+
     // Sync the user's file to the bundled default schema: add keys present in the default but
     // missing in the user file (keeping the user's existing values), and remove obsolete keys no
     // longer in the default (e.g. settings of removed features). zoChat configs have a fixed

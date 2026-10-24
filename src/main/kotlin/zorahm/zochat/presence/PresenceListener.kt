@@ -1,7 +1,5 @@
 package zorahm.zochat.presence
 
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
@@ -16,9 +14,6 @@ import zorahm.zochat.config.Messages
 import zorahm.zochat.privatemsg.PrivateMessageService
 import zorahm.zochat.storage.OfflineMessageRepository
 import zorahm.zochat.util.Sounds
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class PresenceListener(
     private val plugin: Plugin,
@@ -31,8 +26,6 @@ class PresenceListener(
 ) : Listener {
 
     private val mm: MiniMessage = MiniMessage.miniMessage()
-    private val time: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
 
     @EventHandler
     fun onJoin(event: PlayerJoinEvent) {
@@ -72,28 +65,7 @@ class PresenceListener(
                     offline.restore(player.uniqueId, list)
                     return@Runnable
                 }
-                if (list.isNotEmpty()) {
-                    player.sendMessage(
-                        mm.deserialize(
-                            messages.get("chat.offline-messages-header").replace("{count}", list.size.toString())
-                        )
-                    )
-                    for (om in list) {
-                        val senderName = Bukkit.getOfflinePlayer(om.sender).name ?: "Unknown"
-                        val ts = time.format(Instant.ofEpochMilli(om.sentAtMillis))
-                        // Escape the stored sender text — it's the player's literal message and must not be
-                        // re-parsed as MiniMessage (would let tags injected into a PM render on delivery).
-                        val body = mm.deserialize(mm.escapeTags(om.message))
-                            .hoverEvent(
-                                HoverEvent.showText(
-                                    mm.deserialize(messages.get("chat.message-timestamp").replace("{time}", ts))
-                                )
-                            )
-                        val line = mm.deserialize(messages.get("formats.private-message").replace("{player}", senderName))
-                            .replaceText { it.matchLiteral("{message}").replacement(body) }
-                        player.sendMessage(line)
-                    }
-                }
+                pm.deliverOffline(player, list)
             })
         }
     }

@@ -9,10 +9,11 @@ depend:
   - LuckPerms
 softdepend:
   - PlaceholderAPI
+  - DiscordSRV
 commands:
   chat:
     description: Manage chat settings
-    usage: /<command> [reload]
+    usage: /<command> [help|reload|consoleprefix [prefix|clear]]
     aliases: [zochat]
   global:
     description: Send a message to global chat

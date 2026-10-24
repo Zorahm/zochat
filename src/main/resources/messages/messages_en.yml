@@ -44,6 +44,7 @@ chat:
     - "<#70a1ff>📜 Main commands</#70a1ff>"
     - "  <hover:show_text:'<gray>Reloads config and messages'><gray>• /chat reload</gray></hover> — <white>Reload chat</white>"
     - "  <hover:show_text:'<gray>Shows this menu'><gray>• /chat help</gray></hover> — <white>Help</white>"
+    - "  <hover:show_text:'<gray>Console prefix in /say and PMs\n<white>Example:</white> <gray>/chat consoleprefix <badge:console>'><gray>• /chat consoleprefix [prefix|clear]</gray></hover> — <white>Console prefix</white>"
     - ""
     - "<#ff9ff3>✉️ Private messages</#ff9ff3>"
     - "  <hover:show_text:'<gray>Send a PM to a player\n<white>Example:</white> <gray>/msg Nick Hi!'><gray>• /msg <player> <message></gray></hover> — <white>Private message</white>"
@@ -66,12 +67,21 @@ formats:
   private-message-reply: "<gradient:#b47ee5:#f6a0d3>✉️ You → {player}:</gradient> <white>{message}</white>"
   join: "<gradient:#55ff55:#aaffaa>{player} joined the game!</gradient>"
   quit: "<gradient:#ff5555:#ffaaaa>{player} left the game!</gradient>"
+  # Discord -> Minecraft (DiscordSRV): {role} is the top role in its colour plus a space (empty without a role), {name}, {message}
+  discord: "<#5865F2>Discord</#5865F2> <#c0c0c0>•</#c0c0c0> {role}<#fcfcfc>{name}</#fcfcfc><#c0c0c0> › </#c0c0c0>{message}"
 
 # Mention notifications (action bar)
 mention:
   notify: "<yellow>You were mentioned in chat!</yellow>"
   notify-everyone: "<red>You were mentioned via @everyone!</red>"
   notify-here: "<gold>You were mentioned via @here!</gold>"
+
+# /chat consoleprefix ({preview} is the console as players see it)
+console-prefix:
+  set: "<green>Console prefix changed:</green> {preview}"
+  current: "<gray>Console prefix:</gray> {preview}"
+  cleared: "<green>Console prefix removed:</green> {preview}"
+  none: "<gray>No console prefix set:</gray> {preview}"
 
 # /chatlog
 chatlog:

@@ -11,6 +11,8 @@ import org.bukkit.command.TabCompleter
 import org.bukkit.plugin.java.JavaPlugin
 import zorahm.zochat.announcer.AnnouncerConfig
 import zorahm.zochat.announcer.AnnouncerService
+import zorahm.zochat.badge.BadgeTable
+import zorahm.zochat.badge.Badges
 import zorahm.zochat.bubble.BubbleCommand
 import zorahm.zochat.bubble.BubbleConfig
 import zorahm.zochat.bubble.BubbleService
@@ -30,6 +32,8 @@ import zorahm.zochat.command.ChatCommand
 import zorahm.zochat.command.ChatLogCommand
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.config.Messages
+import zorahm.zochat.discord.DiscordBridge
+import zorahm.zochat.discord.DiscordSrvHook
 import zorahm.zochat.guard.CommandGuardConfig
 import zorahm.zochat.guard.CommandGuardListener
 import zorahm.zochat.presence.PresenceListener
@@ -54,6 +58,7 @@ class ZoChatPlugin : JavaPlugin() {
     private var announcer: AnnouncerService? = null
     private var bubble: BubbleService? = null
     private var guardConfig: CommandGuardConfig? = null
+    private var discord: DiscordBridge = DiscordBridge.None
 
     override fun onEnable() {
         displayBanner()
@@ -97,10 +102,21 @@ class ZoChatPlugin : JavaPlugin() {
         val bubbleService = BubbleService(this, bubbleConfig, papi).also { it.start() }
         bubble = bubbleService
 
+        val badges = Badges(BadgeTable.load(this)) {
+            Badges.Settings(config.isBadgesEnabled, config.isBadgesRussian, config.isBadgeIconsEnabled)
+        }
+
+        // Constructing the hook touches github.scarsz classes, so only do it when DiscordSRV is present
+        // (softdepend: it's enabled before us). discordsrv.enabled is read live, so /chat reload can toggle it.
+        if (Bukkit.getPluginManager().isPluginEnabled("DiscordSRV")) {
+            discord = DiscordSrvHook(this, config, messages, bannedWords).also { it.start() }
+            logger.info("Hooked into DiscordSRV")
+        }
+
         val chatService = ChatService(
-            config, messages, luckPerms, bannedWords, mentions, placeholders, papi, chatLog, cooldowns, bubbleService
+            config, messages, luckPerms, bannedWords, mentions, placeholders, papi, chatLog, cooldowns, bubbleService, badges, discord
         )
-        val pm = PrivateMessageService(config, messages, bannedWords, placeholders, offline, cooldowns)
+        val pm = PrivateMessageService(config, messages, bannedWords, placeholders, offline, cooldowns, badges)
         welcome = WelcomeMessages(this)
         announcer = AnnouncerService(this, AnnouncerConfig(this), papi).also { it.start() }
 
@@ -113,9 +129,10 @@ class ZoChatPlugin : JavaPlugin() {
             PresenceListener(this, config, messages, welcome, offline, pm, cooldowns), this
         )
         Bukkit.getPluginManager().registerEvents(CommandGuardListener(this, guardConfig, messages), this)
-        Bukkit.getPluginManager().registerEvents(SayListener(config, papi), this)
+        Bukkit.getPluginManager().registerEvents(SayListener(config, papi, badges), this)
 
-        bind("chat", ChatCommand(this, config, messages), null)
+        val chatCommand = ChatCommand(this, config, messages, badges)
+        bind("chat", chatCommand, chatCommand)
         bind("global", GlobalCommand(chatListener, config, messages), tabCompleter)
         bind("local", LocalCommand(chatListener, config, messages), tabCompleter)
         bind("msg", MsgCommand(pm, messages), null)
@@ -133,6 +150,7 @@ class ZoChatPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        discord.close()
         announcer?.stop()
         bubble?.stop()
         database?.close()

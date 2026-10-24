@@ -22,16 +22,28 @@ repositories {
     // PlaceholderAPI's repo moved to repo.helpch.at; the old extendedclip URL is now a 301 redirect
     // that the Gradle resolver times out on. Resolve against the canonical host instead.
     maven("https://repo.helpch.at/releases/")
+    // DiscordSRV's own Nexus serves its 10 MB jar at a few KB/s; Modrinth's CDN has the identical
+    // plugin jar. exclusiveContent keeps every other dependency from being looked up there.
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") }
+        filter { includeGroup("maven.modrinth") }
+    }
 }
 
 configurations {
     testImplementation { extendsFrom(configurations.compileOnly.get()) }
+    // DiscordSRV's plugin jar bundles an old, unrelocated SnakeYAML that shadows Paper's in tests and
+    // breaks YamlConfiguration. No test touches DiscordSRV (only DiscordSrvHook does), so leave it out.
+    testCompileClasspath { exclude(group = "maven.modrinth") }
+    testRuntimeClasspath { exclude(group = "maven.modrinth") }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT")
     compileOnly("net.luckperms:api:5.4")
     compileOnly("me.clip:placeholderapi:2.11.6")
+    // The plugin jar already carries its relocated JDA (github.scarsz.discordsrv.dependencies.jda).
+    compileOnly("maven.modrinth:discordsrv:1.30.5") { isTransitive = false }
     implementation("com.mysql:mysql-connector-j:9.1.0")
     implementation(kotlin("stdlib"))
 

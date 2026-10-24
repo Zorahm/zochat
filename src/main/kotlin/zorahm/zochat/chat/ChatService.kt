@@ -4,12 +4,16 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.luckperms.api.LuckPerms
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import zorahm.zochat.badge.Badges
 import zorahm.zochat.bubble.BubbleService
 import zorahm.zochat.config.ChatConfig
 import zorahm.zochat.config.Messages
+import zorahm.zochat.discord.DiscordBridge
 import zorahm.zochat.storage.ChatLogRepository
 import java.time.Instant
 import java.time.ZoneId
@@ -25,10 +29,13 @@ class ChatService(
     private val papi: PapiHook,
     private val chatLog: ChatLogRepository,
     private val cooldowns: CooldownService,
-    private val bubble: BubbleService
+    private val bubble: BubbleService,
+    private val badges: Badges,
+    private val discord: DiscordBridge
 ) {
 
     private val mm: MiniMessage = MiniMessage.miniMessage()
+    private val plainText: PlainTextComponentSerializer = PlainTextComponentSerializer.plainText()
     private val time: DateTimeFormatter =
         DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
 
@@ -106,12 +113,7 @@ class ChatService(
 
         val timestamp = time.format(Instant.now())
 
-        // Inline prefix/suffix as MiniMessage so an unclosed colour/gradient in them flows into
-        // what follows in the format — e.g. a <#hex> suffix recolours {message}. Supports both
-        // legacy codes and MiniMessage tags in the LuckPerms meta (PrefixFormatter.toMiniMessage).
-        var inlined = format
-            .replace("{prefix}", PrefixFormatter.toMiniMessage(prefix))
-            .replace("{suffix}", PrefixFormatter.toMiniMessage(suffix))
+        var inlined = inlineMeta(format, prefix, suffix)
 
         // Expand %...% in the format (e.g. %vault_prefix%, %player_world%). The {player}/{message}
         // literals contain no '%' so they survive to the Component replacements below untouched.
@@ -133,20 +135,15 @@ class ChatService(
                 )
             )
 
-        // {player}/{message} stay components so player input is never parsed as MiniMessage,
-        // yet they still inherit any open colour from the inlined prefix/suffix.
-        val finalMessage = mm.deserialize(inlined)
-            .replaceText { it.matchLiteral("{player}").replacement(playerNameComponent) }
-            .replaceText { it.matchLiteral("{message}").replacement(messageComponent) }
+        // Built twice and sent separately instead of Bukkit.broadcast(): a <badge:...> in a prefix is
+        // a resource pack glyph for players but must be a text label in the console, which has no pack.
+        // Sending to the console explicitly also puts local chat in the console and server log.
+        val toPlayers = assemble(inlined, playerNameComponent, messageComponent, badges.forPlayers)
+        (nearby ?: Bukkit.getOnlinePlayers()).forEach { it.sendMessage(toPlayers) }
+        Bukkit.getConsoleSender().sendMessage(assemble(inlined, playerNameComponent, messageComponent, badges.forConsole))
 
-        if (nearby == null) {
-            Bukkit.getServer().broadcast(finalMessage)
-        } else {
-            nearby.forEach { it.sendMessage(finalMessage) }
-            // broadcast() reaches the console on its own; without this local chat never showed up
-            // in the console or server log at all.
-            Bukkit.getConsoleSender().sendMessage(finalMessage)
-        }
+        // The text as players just saw it — banned words censored, ^placeholders expanded — not the raw input.
+        discord.relay(sender, channel, plainText.serialize(processedMessageComponent))
 
         // Bubble is shown in addition to chat; it gates itself on enabled + CHAT trigger. Pass the
         // filtered message so the bubble censors banned words just like chat does.
@@ -175,5 +172,26 @@ class ChatService(
         return Bukkit.getOnlinePlayers()
             .filter { it.world == sender.world && it.location.distanceSquared(origin) <= radius * radius }
             .toHashSet()
+    }
+
+    companion object {
+        private val MINI: MiniMessage = MiniMessage.miniMessage()
+
+        // Inline prefix/suffix as MiniMessage so an unclosed colour/gradient in them flows into
+        // what follows in the format — e.g. a <#hex> suffix recolours {message}. LuckPerms meta may
+        // hold legacy codes (&c, §c, &#rrggbb, §x§r§r...) that MiniMessage would print raw (issue #3),
+        // so they're converted first; MiniMessage tags in the meta pass through untouched.
+        @JvmStatic
+        fun inlineMeta(format: String, prefix: String, suffix: String): String = format
+            .replace("{prefix}", PrefixFormatter.toMiniMessage(prefix))
+            .replace("{suffix}", PrefixFormatter.toMiniMessage(suffix))
+
+        // {player}/{message} stay components so player input is never parsed as MiniMessage,
+        // yet they still inherit any open colour from the inlined prefix/suffix.
+        @JvmStatic
+        fun assemble(inlined: String, player: Component, message: Component, tags: TagResolver): Component =
+            MINI.deserialize(inlined, tags)
+                .replaceText { it.matchLiteral("{player}").replacement(player) }
+                .replaceText { it.matchLiteral("{message}").replacement(message) }
     }
 }

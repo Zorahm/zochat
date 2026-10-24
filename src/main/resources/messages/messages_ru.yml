@@ -44,6 +44,7 @@ chat:
     - "<#70a1ff>📜 Основные команды</#70a1ff>"
     - "  <hover:show_text:'<gray>Перезагружает конфиг и сообщения'><gray>• /chat reload</gray></hover> — <white>Обновить чат</white>"
     - "  <hover:show_text:'<gray>Показывает это меню'><gray>• /chat help</gray></hover> — <white>Помощь</white>"
+    - "  <hover:show_text:'<gray>Префикс консоли в /say и ЛС\n<white>Пример:</white> <gray>/chat consoleprefix <badge:console>'><gray>• /chat consoleprefix [префикс|clear]</gray></hover> — <white>Префикс консоли</white>"
     - ""
     - "<#ff9ff3>✉️ Личные сообщения</#ff9ff3>"
     - "  <hover:show_text:'<gray>Отправляет ЛС игроку\n<white>Пример:</white> <gray>/msg Nick Привет!'><gray>• /msg <игрок> <сообщение></gray></hover> — <white>Написать в ЛС</white>"
@@ -66,12 +67,21 @@ formats:
   private-message-reply: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"
   join: "<gradient:#55ff55:#aaffaa>{player} присоединился к игре!</gradient>"
   quit: "<gradient:#ff5555:#ffaaaa>{player} покинул игру!</gradient>"
+  # Discord -> Minecraft (DiscordSRV): {role} — верхняя роль в её цвете и пробел после неё (пусто без роли), {name}, {message}
+  discord: "<#5865F2>Discord</#5865F2> <#c0c0c0>•</#c0c0c0> {role}<#fcfcfc>{name}</#fcfcfc><#c0c0c0> › </#c0c0c0>{message}"
 
 # Уведомления об упоминании (в action bar)
 mention:
   notify: "<yellow>Тебя упомянули в чате!</yellow>"
   notify-everyone: "<red>Вас упомянули через @everyone!</red>"
   notify-here: "<gold>Вас упомянули через @here!</gold>"
+
+# /chat consoleprefix ({preview} — консоль так, как её видят игроки)
+console-prefix:
+  set: "<green>Префикс консоли изменён:</green> {preview}"
+  current: "<gray>Префикс консоли:</gray> {preview}"
+  cleared: "<green>Префикс консоли убран:</green> {preview}"
+  none: "<gray>Префикс консоли не задан:</gray> {preview}"
 
 # Сообщения для /chatlog
 chatlog:
