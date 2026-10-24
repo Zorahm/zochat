@@ -30,6 +30,9 @@ class SayListener(
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerSay(event: PlayerCommandPreprocessEvent) {
         if (!config.isSayFormattingEnabled) return
+        // This event fires BEFORE Bukkit checks command permissions, so without this any player
+        // could broadcast via /say. Leave a denied /say alone — vanilla answers with its own error.
+        if (!event.player.hasPermission(SAY_PERMISSION)) return
         val message = sayArgument(event.message) ?: return
         event.isCancelled = true
         broadcastFromPlayer(event.player, message)
@@ -82,5 +85,9 @@ class SayListener(
             .replace("{player}", name)
             .replace("{message}", message)
         return mm.deserialize(spliced)
+    }
+
+    private companion object {
+        const val SAY_PERMISSION = "minecraft.command.say"
     }
 }

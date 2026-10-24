@@ -52,6 +52,20 @@ class CommandGuardTest {
         assertTrue(guard.isBlocked("minecraft:deop"))
     }
 
+    // Only the first token used to be checked, so wrapping a blocked command in /execute ran it.
+    @Test
+    fun blocksCommandWrappedInExecuteRun() {
+        assertTrue(guard.isBlocked("/execute as @s run op Zorahm"))
+        assertTrue(guard.isBlocked("/minecraft:execute run seed"))
+        assertTrue(guard.isBlocked("/execute at @p run execute run deop Zorahm"))
+    }
+
+    @Test
+    fun allowsExecuteOfUnlistedCommand() {
+        assertFalse(guard.isBlocked("/execute as @a run say hi"))
+        assertFalse(guard.isBlocked("execute"))
+    }
+
     @Test
     fun ignoresBlankInput() {
         assertFalse(guard.isBlocked(""))

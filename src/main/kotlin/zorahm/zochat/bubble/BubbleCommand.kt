@@ -4,10 +4,11 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import zorahm.zochat.chat.ChatListener
 import zorahm.zochat.config.Messages
 
 class BubbleCommand(
-    private val bubble: BubbleService,
+    private val chat: ChatListener,
     private val config: BubbleConfig,
     private val messages: Messages,
 ) : CommandExecutor {
@@ -25,7 +26,9 @@ class BubbleCommand(
             sender.sendMessage(messages.component("bubble.usage"))
             return true
         }
-        bubble.onCommand(sender, args.joinToString(" "))
+        // Through the chat event, so mute plugins can stop it; ChatService.sendBubble then applies
+        // the banned-words filter and the bubble cooldown.
+        chat.chatAs(sender, args.joinToString(" "), ChatListener.Forced.BUBBLE)
         return true
     }
 }

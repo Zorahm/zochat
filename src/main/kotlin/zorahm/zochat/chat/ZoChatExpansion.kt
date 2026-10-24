@@ -6,8 +6,9 @@ import org.bukkit.plugin.java.JavaPlugin
 import zorahm.zochat.config.ChatConfig
 
 /**
- * Exposes zoChat data to other plugins via %zochat_...%. PAPI requests run on the main thread
- * and must return fast, so only synchronous, no-DB values are offered here.
+ * Exposes zoChat data to other plugins via %zochat_...%. Requests come from whichever thread the
+ * calling plugin resolves on (scoreboards and tab plugins often do it async) and must return fast,
+ * so only thread-safe, no-DB values are offered here.
  */
 class ZoChatExpansion(
     private val plugin: JavaPlugin,

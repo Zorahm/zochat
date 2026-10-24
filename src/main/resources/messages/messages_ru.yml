@@ -9,6 +9,7 @@ private-messages:
   player-not-found: "<red>Игрок {player} не найден!</red>"
   offline-sent: "<green>Сообщение отправлено игроку {player} (оффлайн).</green>"
   offline-disabled: "<red>Оффлайн-сообщения отключены.</red>"
+  self: "<red>Нельзя написать самому себе!</red>"
 
 # Сообщения для команды /bubble
 bubble:
@@ -25,6 +26,8 @@ reply:
 chat:
   spam-warning: "<red>Не спамьте! Подождите немного перед отправкой следующего сообщения.</red>"
   local-disabled: "<red>Локальный чат отключен на сервере!</red>"
+  global-disabled: "<red>Глобальный чат отключен на сервере!</red>"
+  no-permission: "<red>У вас нет доступа к этому чату!</red>"
   message-player: "Написать {player} в ЛС"
   message-timestamp: "Отправлено: {time}"
   message-reply-hover: "<gray>Нажмите, чтобы ответить</gray>"
@@ -53,6 +56,22 @@ chat:
     - "<#a4b0be>🔗 Дополнительно</#a4b0be>"
     - "  <hover:show_text:'<gray>Упомяните игрока в любом чате\n<white>Пример:</white> <gray>Привет, @Ник!</gray>'><gray>• @Игрок</gray></hover> — <white>Упоминание</white>"
     - ""
+
+# Форматы чата, ЛС и входа/выхода (MiniMessage)
+# Чат: {prefix}, {suffix}, {player}, {message}. ЛС: {player}, {message}. Вход/выход: {player}.
+formats:
+  local-chat: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+  global-chat: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+  private-message: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"
+  private-message-reply: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"
+  join: "<gradient:#55ff55:#aaffaa>{player} присоединился к игре!</gradient>"
+  quit: "<gradient:#ff5555:#ffaaaa>{player} покинул игру!</gradient>"
+
+# Уведомления об упоминании (в action bar)
+mention:
+  notify: "<yellow>Тебя упомянули в чате!</yellow>"
+  notify-everyone: "<red>Вас упомянули через @everyone!</red>"
+  notify-here: "<gold>Вас упомянули через @here!</gold>"
 
 # Сообщения для /chatlog
 chatlog:

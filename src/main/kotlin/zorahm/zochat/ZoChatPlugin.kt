@@ -58,8 +58,10 @@ class ZoChatPlugin : JavaPlugin() {
     override fun onEnable() {
         displayBanner()
 
-        if (Bukkit.getPluginManager().getPlugin("LuckPerms") == null) {
-            logger.severe("LuckPerms not found - disabling zoChat. Download: https://luckperms.net/download")
+        // `depend` guarantees LuckPerms is installed, but it can still have failed to enable — then
+        // LuckPermsProvider.get() throws. Bail out with a readable message instead of a stack trace.
+        if (!Bukkit.getPluginManager().isPluginEnabled("LuckPerms")) {
+            logger.severe("LuckPerms is not enabled - disabling zoChat. Download: https://luckperms.net/download")
             Bukkit.getPluginManager().disablePlugin(this)
             return
         }
@@ -67,7 +69,6 @@ class ZoChatPlugin : JavaPlugin() {
 
         ClassPreloader.preload(file, classLoader, logger)
 
-        saveDefaultConfig()
         config = ChatConfig(this)
         messages = Messages(this, config.messageLanguage)
 
@@ -87,9 +88,9 @@ class ZoChatPlugin : JavaPlugin() {
         offline.createTable()
 
         val bannedWords = BannedWordsFilter(config)
-        val mentions = MentionHandler(this, config)
+        val mentions = MentionHandler(this, config, messages)
         val papi = PapiHook()
-        placeholders = PlaceholderService(this, PlaceholderConfig(this), messages, papi)
+        placeholders = PlaceholderService(this, PlaceholderConfig(this), messages, papi, bannedWords)
         val tabCompleter = MentionTabCompleter(mentions)
 
         val bubbleConfig = BubbleConfig(this)
@@ -106,7 +107,8 @@ class ZoChatPlugin : JavaPlugin() {
         val guardConfig = CommandGuardConfig(this)
         this.guardConfig = guardConfig
 
-        Bukkit.getPluginManager().registerEvents(ChatListener(this, chatService, config), this)
+        val chatListener = ChatListener(this, chatService, config, messages)
+        Bukkit.getPluginManager().registerEvents(chatListener, this)
         Bukkit.getPluginManager().registerEvents(
             PresenceListener(this, config, messages, welcome, offline, pm, cooldowns), this
         )
@@ -114,12 +116,12 @@ class ZoChatPlugin : JavaPlugin() {
         Bukkit.getPluginManager().registerEvents(SayListener(config, papi), this)
 
         bind("chat", ChatCommand(this, config, messages), null)
-        bind("global", GlobalCommand(chatService, messages), tabCompleter)
-        bind("local", LocalCommand(chatService, config, messages), tabCompleter)
+        bind("global", GlobalCommand(chatListener, config, messages), tabCompleter)
+        bind("local", LocalCommand(chatListener, config, messages), tabCompleter)
         bind("msg", MsgCommand(pm, messages), null)
         bind("reply", ReplyCommand(pm, messages), null)
         bind("chatlog", ChatLogCommand(this, chatLog, messages), null)
-        bind("bubble", BubbleCommand(bubbleService, bubbleConfig, messages), null)
+        bind("bubble", BubbleCommand(chatListener, bubbleConfig, messages), null)
 
         // Registering touches me.clip classes, so only do it when PAPI is actually present.
         if (papi.isAvailable) {
@@ -139,7 +141,6 @@ class ZoChatPlugin : JavaPlugin() {
     }
 
     fun reloadEverything() {
-        reloadConfig()
         config.reload()
         messages.load(config.messageLanguage)
         placeholders.reload()

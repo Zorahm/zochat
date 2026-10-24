@@ -9,6 +9,7 @@ private-messages:
   player-not-found: "<red>Player {player} not found or offline!</red>"
   offline-sent: "<green>Message sent to {player} (offline).</green>"
   offline-disabled: "<red>Offline messages are disabled.</red>"
+  self: "<red>You can't message yourself!</red>"
 
 # /bubble command
 bubble:
@@ -25,6 +26,8 @@ reply:
 chat:
   spam-warning: "<red>Don't spam! Wait a bit before sending another message.</red>"
   local-disabled: "<red>Local chat is disabled on the server!</red>"
+  global-disabled: "<red>Global chat is disabled on the server!</red>"
+  no-permission: "<red>You don't have access to this chat!</red>"
   message-player: "Message {player} privately"
   message-timestamp: "Sent at: {time}"
   message-reply-hover: "<gray>Click to reply</gray>"
@@ -53,6 +56,22 @@ chat:
     - "<#a4b0be>🔗 Extra</#a4b0be>"
     - "  <hover:show_text:'<gray>Mention a player in any chat\n<white>Example:</white> <gray>Hi, @Nick!</gray>'><gray>• @Player</gray></hover> — <white>Mention</white>"
     - ""
+
+# Chat, private-message and join/quit formats (MiniMessage)
+# Chat: {prefix}, {suffix}, {player}, {message}. PM: {player}, {message}. Join/quit: {player}.
+formats:
+  local-chat: "<gradient:#55ff55:#aaffaa>[Local]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+  global-chat: "<gradient:#ffaa33:#ffd700>[Global]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"
+  private-message: "<gradient:#f6a0d3:#b47ee5>✉️ PM from {player}:</gradient> <white>{message}</white>"
+  private-message-reply: "<gradient:#b47ee5:#f6a0d3>✉️ You → {player}:</gradient> <white>{message}</white>"
+  join: "<gradient:#55ff55:#aaffaa>{player} joined the game!</gradient>"
+  quit: "<gradient:#ff5555:#ffaaaa>{player} left the game!</gradient>"
+
+# Mention notifications (action bar)
+mention:
+  notify: "<yellow>You were mentioned in chat!</yellow>"
+  notify-everyone: "<red>You were mentioned via @everyone!</red>"
+  notify-here: "<gold>You were mentioned via @here!</gold>"
 
 # /chatlog
 chatlog:

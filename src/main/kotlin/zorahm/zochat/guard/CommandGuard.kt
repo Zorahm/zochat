@@ -17,10 +17,24 @@ class CommandGuard(blocked: Collection<String>, private val blockNamespaced: Boo
      */
     fun isBlocked(commandLine: String): Boolean {
         val name = normalize(commandLine, blockNamespaced) ?: return false
-        return name in blockedNames
+        if (name in blockedNames) return true
+        // "/execute ... run op X" runs a blocked command without it ever being the first token —
+        // check whatever each "run" hands off to (nested execute chains included).
+        if (normalize(commandLine, stripNamespace = true) != "execute") return false
+        val tokens = commandLine.trim().split(WHITESPACE)
+        for (i in tokens.indices) {
+            if (tokens[i].equals("run", ignoreCase = true) && i + 1 < tokens.size &&
+                isBlocked(tokens.subList(i + 1, tokens.size).joinToString(" "))
+            ) {
+                return true
+            }
+        }
+        return false
     }
 
     companion object {
+        private val WHITESPACE = Regex("\\s+")
+
         /**
          * Reduce a raw command line to the bare command name used for matching: drop a leading
          * '/', take the first whitespace-delimited token, lowercase it, and — when [stripNamespace]

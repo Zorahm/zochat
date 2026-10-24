@@ -30,7 +30,7 @@ build/libs/zoChat-2.0.0.jar
 
 Main entry point at `src/main/kotlin/zorahm/zochat/ZoChatPlugin.kt`. On enable:
 1. Displays ASCII banner using Adventure Components
-2. Checks for LuckPerms dependency (required) — disables the plugin when missing
+2. Checks LuckPerms is enabled (`depend` guarantees it's installed, but it can fail to enable) — disables the plugin otherwise
 3. Preloads classes (`ClassPreloader`), then initializes: ChatConfig, Messages (ru/en), Database (SQLite/MySQL), repositories
 4. Creates services: BannedWordsFilter, MentionHandler, PapiHook, PlaceholderService, BubbleService, ChatService, PrivateMessageService, WelcomeMessages, AnnouncerService, CommandGuardConfig
 5. Registers commands: `/chat`, `/global` (`/g`), `/local` (`/l`), `/msg`, `/reply` (`/r`), `/chatlog`, `/bubble` (`/b`)
@@ -39,25 +39,25 @@ Main entry point at `src/main/kotlin/zorahm/zochat/ZoChatPlugin.kt`. On enable:
 
 ### Package Layout
 
-Java and Kotlin live in the same package tree (`src/main/java/...` + `src/main/kotlin/...`); the extension below tells you which source set a file is in.
+All sources are Kotlin, in `src/main/kotlin/...` and `src/test/kotlin/...`. The plugin was ported from a Java/Kotlin hybrid; the whole codebase is now a single language.
 
 ```
 zorahm.zochat
 ├── ZoChatPlugin.kt                   // lifecycle + manual DI wiring only
 ├── config/
-│   ├── ChatConfig.java               // typed getters over config.yml
-│   ├── Messages.java                 // ru/en player-facing strings
-│   └── ConfigFiles.java              // saveDefault + non-destructive merge of missing keys
+│   ├── ChatConfig.kt                // typed getters over config.yml
+│   ├── Messages.kt                  // ru/en player-facing strings
+│   └── ConfigFiles.kt               // saveDefault + non-destructive merge of missing keys
 ├── chat/
-│   ├── ChatService.java              // THE single send pipeline (local + global + /g + /l)
-│   ├── ChatChannel.java              // enum LOCAL/GLOBAL
-│   ├── ChatListener.java             // AsyncChatEvent -> ChatService
-│   ├── GlobalCommand.java            // /g -> ChatService.send(GLOBAL)
-│   ├── LocalCommand.java             // /l -> ChatService.send(LOCAL)
-│   ├── PrefixFormatter.java          // LuckPerms legacy -> MiniMessage / Component
-│   ├── MentionHandler.java           // @player/@everyone/@here
-│   ├── MentionTabCompleter.java      // tab completion for @mentions
-│   ├── PlaceholderService.java       // ^loc/^world/custom; regex match; escapes player input
+│   ├── ChatService.kt               // THE single send pipeline (local + global + /g + /l)
+│   ├── ChatChannel.kt               // enum LOCAL/GLOBAL
+│   ├── ChatListener.kt              // AsyncChatEvent -> route() -> ChatService; chatAs() for /g /l /bubble
+│   ├── GlobalCommand.kt             // /g -> ChatListener.chatAs(GLOBAL)
+│   ├── LocalCommand.kt              // /l -> ChatListener.chatAs(LOCAL)
+│   ├── PrefixFormatter.kt           // LuckPerms legacy -> MiniMessage / Component
+│   ├── MentionHandler.kt            // @player/@everyone/@here
+│   ├── MentionTabCompleter.kt       // tab completion for @mentions
+│   ├── PlaceholderService.kt        // ^loc/^world/custom; regex match; escapes player input
 │   ├── BannedWordsFilter.kt          // exact/contains/smart filter + position-mapped normalization
 │   ├── CooldownService.kt            // per-channel anti-spam cooldowns (ConcurrentHashMap)
 │   ├── PlaceholderConfig.kt          // loads placeholders.yml (builtin/custom ^ defs + world-names)
@@ -81,48 +81,54 @@ zorahm.zochat
 │   └── SayListener.kt                // reformats vanilla /say (player + console) like chat
 ├── privatemsg/
 │   ├── PrivateMessageService.kt      // /msg + /reply core, offline hand-off
-│   ├── MsgCommand.java
-│   └── ReplyCommand.java
+│   ├── MsgCommand.kt
+│   └── ReplyCommand.kt
 ├── presence/
-│   ├── PresenceListener.java         // join + quit + welcome + offline delivery
-│   └── WelcomeMessages.java          // welcome_messages.yml loader
+│   ├── PresenceListener.kt           // join + quit + welcome + offline delivery
+│   └── WelcomeMessages.kt            // welcome_messages.yml loader
 ├── storage/
-│   ├── Database.java                 // single connection, async writes via single-thread executor
-│   ├── ChatLogRepository.java        // chat_logs table
-│   └── OfflineMessageRepository.java // offline_messages table
+│   ├── Database.kt                   // single connection, async writes via single-thread executor
+│   ├── ChatLogRepository.kt          // chat_logs table
+│   └── OfflineMessageRepository.kt   // offline_messages table
 ├── command/
-│   ├── ChatCommand.java              // /chat reload|help
+│   ├── ChatCommand.kt                // /chat reload|help
 │   └── ChatLogCommand.kt             // /chatlog <player|clear>
 └── util/
     ├── Sounds.kt                     // safe Sound.valueOf -> Optional<Sound>
     └── ClassPreloader.kt             // eager class load at onEnable — lazy loads read the shaded jar on the main thread mid-tick (watchdog stall on slow-I/O hosts)
 ```
 
-### Chat Flow (ChatService.java)
+### Chat Flow (ChatService.kt)
 
-All chat messages (natural chat, /g, /l) go through a single `ChatService.send(player, rawMessage, channel)`. Natural chat arrives on `AsyncChatEvent` (off-thread); `ChatListener` cancels the event and re-dispatches `send` to the main thread, because the pipeline reads player state (inventory/health/location) and plays sounds. The order:
+All chat messages (natural chat, /g, /l) go through a single `ChatService.send(player, rawMessage, channel)`. Natural chat arrives on `AsyncChatEvent` (off-thread); `ChatListener` cancels the event and re-dispatches `send` to the main thread, because the pipeline reads player state (inventory/health/location) and plays sounds. `/g`, `/l` and `/bubble` don't call the service directly: `ChatListener.chatAs()` re-sends their text through `Player.chat()`, which fires `AsyncChatEvent` **synchronously** on the main thread, so mute/anti-spam/logging plugins see it like typed chat. A `forced` map entry (set only for that synchronous call; async events ignore it) carries the command's channel; a leading `/` gets a space so `Player.chat()` doesn't run it as a command. The order:
+0. Channel permission (`zochat.local` / `zochat.global`, from `ChatChannel.permission`)
 1. Banned words filter (block or replace mode) — before the cooldown so a rejected message doesn't burn it
 2. Anti-spam cooldown check (per-channel via `CooldownService`; bypass permission: `zochat.spam.bypass`)
 3. The player's text is **escaped once** (`miniMessage.escapeTags`) — player-typed `<...>` is never parsed as MiniMessage (no colour/`<click:run_command>` injection). Everything below works on that escaped string; there is no Component→serialize→deserialize round-trip
-4. Mention processing (`@player`, `@everyone`, `@here`) + notifications — runs **before** placeholder expansion so an `@` inside an expanded value (PAPI, anvil-renamed item in `^item`) can never trigger a mention
-5. Placeholder processing (`^loc`, `^health`, etc.) via `PlaceholderService.processEscaped` (input already escaped; only trusted config formats carry tags)
-6. Chat log to DB (async)
-7. LuckPerms prefix/suffix via `PrefixFormatter.toMiniMessage()`, **inlined** into the format string (not inserted as closed components) so an unclosed colour/gradient in a suffix flows into `{player}`/`{message}`
-8. Build final Component: `{player}`/`{message}` stay components (player input was already escaped in step 3, so it never renders as MiniMessage) but inherit the open colour from the inlined prefix/suffix
-9. Route: LOCAL = players in radius (squared distance), GLOBAL = `Bukkit.broadcast()`
+4. Mention processing (`@player`, `@everyone`, `@here`) — runs **before** any placeholder expansion so an `@` inside an expanded value (PAPI, anvil-renamed item in `^item`) can never trigger a mention. Notifications go only to players who will receive the message (local radius for LOCAL)
+5. Player-typed `%...%` (opt-in, permission-gated) via `PapiHook.applyToPlayerText` — each value is flattened to plain text and escaped on its own; the player's own `&c` stays literal
+6. Placeholder processing (`^loc`, `^health`, etc.) via `PlaceholderService.processEscaped` (input already escaped; only trusted config formats carry tags; `^item` names are escaped and banned-word-filtered)
+7. Chat log to DB (async)
+8. LuckPerms prefix/suffix via `PrefixFormatter.toMiniMessage()`, **inlined** into the format string (`formats.local-chat`/`formats.global-chat` from the messages file) (not inserted as closed components) so an unclosed colour/gradient in a suffix flows into `{player}`/`{message}`
+9. Build final Component: `{player}`/`{message}` stay components (player input was already escaped in step 3, so it never renders as MiniMessage) but inherit the open colour from the inlined prefix/suffix
+10. Route: LOCAL = players in radius (squared distance) + console, GLOBAL = `Bukkit.broadcast()`
+
+`ChatListener.route()` (pure, unit-tested) decides the channel. With a forced intent (from `chatAs`) the command's channel wins and the text is taken literally (`/l !hi` stays local), `BUBBLE` only shows a bubble (`ChatService.sendBubble`: filter + `BUBBLE` cooldown). Otherwise: `!text` → GLOBAL, plain → LOCAL if local chat is on, else GLOBAL; a bare `!` is swallowed; `!` while `global-chat.enabled: false` is refused; with BOTH channels off zoChat leaves chat to vanilla.
 
 ### Database
 
 Single `Database` class with async writes via a single-thread executor (`zoChat-DB` daemon thread). Two repositories:
-- **ChatLogRepository**: `chat_logs(id, player_uuid TEXT, message TEXT, timestamp)`
-- **OfflineMessageRepository**: `offline_messages(id, sender_uuid, receiver_uuid, message, timestamp)`
+- **ChatLogRepository**: `chat_logs(id, player_uuid, message, timestamp)` — `recentFor` orders by `id` (timestamps are 1-second); callbacks get `null` on a DB error
+- **OfflineMessageRepository**: `offline_messages(id, sender_uuid, receiver_uuid, message, timestamp)` — `drainFor` selects+deletes in one transaction; `restore` puts drained rows back (player quit mid-drain)
 
-SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All DB I/O is async — reads deliver results back to main thread via `Bukkit.getScheduler().runTask()`. `conn()` revalidates MySQL connections with `isValid()` and reopens dead ones (a connection killed by `wait_timeout` still reports `isClosed() == false`); the JDBC URL deliberately has no `autoReconnect=true`.
+DDL is **per dialect** (`Database.isMysql`): SQLite `INTEGER PRIMARY KEY AUTOINCREMENT` + `CREATE INDEX IF NOT EXISTS`; MySQL `BIGINT AUTO_INCREMENT`, `VARCHAR(36)` uuids (MySQL can't index TEXT), inline `INDEX`, `utf8mb4`. Times are written explicitly via `Database.bindTime`/`readTime`: SQLite stores UTC text `yyyy-MM-dd HH:mm:ss` (sqlite-jdbc's `getTimestamp()` reads CURRENT_TIMESTAMP's UTC text as local time), MySQL a native DATETIME.
+
+SQLite default (`chat.db`); MySQL supported via bundled+relocated connector. All DB I/O is async — reads deliver results back to main thread via `Bukkit.getScheduler().runTask()`. `conn()` revalidates MySQL connections with `isValid()` and reopens dead ones (a connection killed by `wait_timeout` still reports `isClosed() == false`); the JDBC URL deliberately has no `autoReconnect=true`, and carries `allowPublicKeyRetrieval=true` (MySQL 8 auth without SSL).
 
 ## Configuration Files
 
-- `config.yml`: Main configuration (chat formats, cooldowns, database, banned words, mention settings, join/quit, PlaceholderAPI toggles)
-- `messages/messages_ru.yml` and `messages/messages_en.yml`: Player-facing localized messages. Language set via `config.yml: message: ru/en`
+- `config.yml`: Behaviour only (channels, cooldowns, database, banned words, mention formats/permissions, join/quit toggles, PlaceholderAPI toggles) — no language-dependent text
+- `messages/messages_ru.yml` and `messages/messages_en.yml`: Every player-visible text, incl. the chat/PM/join/quit formats (`formats.*`) and mention action-bar notifications (`mention.notify*`). Both moved out of config.yml; `ChatConfig.customisedMovedTexts()` (unit-tested) carries values the admin changed from the old Russian defaults into the active language's file before `syncWithDefaults` drops the old keys. Language set via `config.yml: message: ru/en`
 - `welcome_messages/welcome_messages.yml`: Welcome messages shown on join
 - `placeholders.yml`: `^` placeholders — built-in + custom (PAPI-backed) + world-name translation
 - `announcer.yml`: Timed chat broadcasts (announcers + announcements-by-ID)
@@ -144,30 +150,31 @@ Components are built using `Component.replaceText()` to substitute placeholders.
 ### LuckPerms Integration
 
 LuckPerms prefix/suffix meta may contain **legacy color codes** (`&c`, `§c`, `&#ff5555`, `§x§f§f...`) AND/OR **MiniMessage tags** (`<#ff5555>`, `<gradient:...>`). MiniMessage does NOT parse legacy codes, and the legacy serializer does NOT parse MiniMessage — so use `PrefixFormatter`:
-- `PrefixFormatter.toMiniMessage(meta)` — translates legacy codes to MiniMessage tags while **preserving** existing MiniMessage tags (leaves them unclosed, like legacy). `ChatService` inlines the result into the format so an unclosed `<#hex>` in a suffix recolours the following `{message}`. This is how a player's message colour is driven by their suffix.
+- `PrefixFormatter.toMiniMessage(meta)` — translates legacy codes to MiniMessage tags while **preserving** existing MiniMessage tags (leaves them unclosed, like legacy). `ChatService` inlines the result into the format so an unclosed `<#hex>` in a suffix recolours the following `{message}`. This is how a player's message colour is driven by their suffix. Legacy semantics are kept: a colour code ends the decorations that earlier legacy codes in the same string opened (`&c&l[Admin]&7` emits `<!bold>` before `<gray>`), but never touches a `<bold>` from the surrounding format.
 - `PrefixFormatter.format(meta)` — legacy → standalone `Component` (closed), when you just need the rendered prefix/suffix on its own.
 
 Never pass raw LuckPerms strings to `miniMessage.deserialize()` directly, or legacy codes render as raw characters (issue #3).
 
 ### Anti-Spam System
 
-`CooldownService` (Kotlin) holds a `ConcurrentHashMap<UUID, ConcurrentHashMap<Channel, Long>>` — cooldowns are **per channel** (`LOCAL`/`GLOBAL`/`PRIVATE`), so a global message no longer blocks a following local/private one. `ConcurrentHashMap` because it's read from PlaceholderAPI requests (which can run off-thread). `isOnCooldown()` checks and records "now" in one call (only when allowed). Cleared per-player on quit, fully reset on reload/disable. Cooldown times are **seconds** in config, compared in **milliseconds** in code. The cooldown is checked **after** the banned-words filter, so a rejected message doesn't burn it. Bypass permission: `zochat.spam.bypass`.
+`CooldownService` (Kotlin) holds a `ConcurrentHashMap<UUID, ConcurrentHashMap<Channel, Long>>` — cooldowns are **per channel** (`LOCAL`/`GLOBAL`/`PRIVATE`/`BUBBLE`), so a global message no longer blocks a following local/private one. `ConcurrentHashMap` because it's read from PlaceholderAPI requests (which can run off-thread). `isOnCooldown()` checks and records "now" in one call (only when allowed). Cleared per-player on quit, fully reset on reload/disable. Cooldown times are **seconds** in config, compared in **milliseconds** in code. The cooldown is checked **after** the banned-words filter, so a rejected message doesn't burn it. Bypass permission: `zochat.spam.bypass`.
 
-### Mention System (MentionHandler.java)
+### Mention System (MentionHandler.kt)
 
 - `@PlayerName` — partial name matching, max 5 per message
 - `@everyone` (aliases: `@все`, `@all`) — requires `zochat.mention.everyone`
 - `@here` (aliases: `@здесь`) — players within `here-radius`, requires `zochat.mention.here`
+- `EVERYONE_PATTERN`/`HERE_PATTERN` are whole-word (`@Allan` is not `@all`) and `UNICODE_CASE` (`@ВСЕ`); vanished players (`canSee`) can't be mentioned or tab-completed
 
-### Placeholder System (PlaceholderService.java + PlaceholderConfig.kt)
+### Placeholder System (PlaceholderService.kt + PlaceholderConfig.kt)
 
-Placeholders start with `^` and are configured in their own **`placeholders.yml`** (not config.yml). `PlaceholderConfig` loads it: a master `enabled`, a `world-names` translation map (real world → display name, applied to `^world` and the `{world}` token in `^loc`), a `builtin` section (loc/world/time/health/ping/biome/item — resolved from player state) and a `custom` section. **Custom** placeholders are PlaceholderAPI-backed: `value` (a `%...%` string resolved per player) is spliced into `format` as `{value}`.
+Placeholders start with `^` and are configured in their own **`placeholders.yml`** (not config.yml). `PlaceholderConfig` loads it: a master `enabled`, a `world-names` translation map (real world → display name, applied to `^world` and the `{world}` token in `^loc`), a `builtin` section (loc/world/time/health/ping/biome/item — resolved from player state) and a `custom` section. **Custom** placeholders are PlaceholderAPI-backed: `value` (a `%...%` string resolved per player via `PapiHook.applyColored` — legacy colours kept, MiniMessage tags in the value escaped, since values can be player-made) is spliced into `format` as `{value}`.
 
 Matching uses a single regex built from all enabled aliases, **longest-first with a trailing `(?![\p{L}\p{N}])` lookahead** (`buildPattern`, package-private/static, unit-tested) — so `^world` wins over the `^w` alias and `^w` never matches inside `^wave`. Unknown/no-permission tokens are left literal. The player's text is escaped (`escapeTags`) before matching, so only trusted config formats carry MiniMessage. `placeholders.yml` does NOT use `syncWithDefaults` (custom IDs / world-names are user-authored keys).
 
 ### Banned Words (BannedWordsFilter.kt)
 
-Modes: `exact`, `contains`, `smart` (default). Actions: `block` (default), `replace`. Normalization (removes spaces/repeats, L33t speak, Cyrillic look-alikes) is toggled by `banned-words.normalize` (default true). Detection keeps a position map back to the original text, so detect and censor share one match set — `replace` censors the matched original span (including bypass spans like `b a d`) and does NOT block. `smart` adds a word-boundary check on the original text (so `ass` does not match inside `class`). Supports `regex:` prefix. `normalize()` and `apply()` are public static (companion `@JvmStatic`) for testability.
+Modes: `exact`, `contains`, `smart` (default). Actions: `block` (default), `replace`. Normalization (removes separators, L33t speak, Cyrillic look-alikes) builds **runs** of a repeated letter; a run of 3+ in the message matches any count in the word, 1 vs 2 must match exactly (`asss` hits `ass`, `good` doesn't hit `god`). It is toggled by `banned-words.normalize` (default true). Detection keeps a position map back to the original text, so detect and censor share one match set — `replace` censors the matched original span (including bypass spans like `b a d`) and does NOT block. `smart` adds a word-boundary check on the original text (so `ass` does not match inside `class`). Supports `regex:` prefix. `normalize()` and `apply()` are public static (companion `@JvmStatic`) for testability.
 
 ## Testing
 
@@ -177,7 +184,7 @@ JUnit 5 tests in `src/test/`. Adventure API on test classpath via Gradle `extend
 ./gradlew test
 ```
 
-Current tests: PrefixFormatterTest (legacy code parsing), BannedWordsFilterTest (normalization + matching), PlaceholderMatchTest (`buildPattern` longest-first matching), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced decisions).
+Current tests: PrefixFormatterTest (legacy code parsing, decoration reset), BannedWordsFilterTest (normalization + run matching), PlaceholderMatchTest (`buildPattern` longest-first matching), MentionPatternTest (whole-word @everyone/@here), ChatRouteTest (`!`/channel routing, forced intents), PapiPlayerTextTest (`PapiHook.expandEscaped`/`expandColored`), MovedTextsTest (config.yml -> messages migration), AnnouncementSelectorTest (SEQUENTIAL/RANDOM rotation), CommandGuardTest (blocked/namespaced/`execute run` decisions), StorageTest (repositories on a real SQLite file — `sqlite-jdbc` is a testImplementation dep since Paper only provides it at runtime).
 
 ## CI
 
@@ -193,9 +200,11 @@ The wrapper needs its executable bit **in git**, or the runner fails with `./gra
 - Cooldown times are **seconds** in config, **milliseconds** in code
 - Local chat radius is **squared** in distance check (avoid sqrt)
 - AsyncChatEvent must be cancelled, then `send` re-dispatched to the main thread (it reads player state)
-- Never `miniMessage.deserialize()` raw player text — escape it first (`escapeTags`), or tags injected in chat/PMs render (incl. `<click:run_command>`)
+- Never `miniMessage.deserialize()` raw player text — escape it first (`escapeTags`), or tags injected in chat/PMs render (incl. `<click:run_command>`). That includes player text read back from the DB (`/chatlog`, offline PMs), anvil item names (`^item`) and player-typed PAPI values
+- `PlayerCommandPreprocessEvent` fires **before** Bukkit's permission check — a listener that takes over a command (`SayListener` for /say) must check the command's permission itself
+- DDL is per dialect — `AUTOINCREMENT` is SQLite-only and MySQL can't index TEXT; branch on `Database.isMysql`
 - LuckPerms legacy codes → `PrefixFormatter` (never `miniMessage.deserialize()` directly)
-- MySQL driver is relocated by Shadow — explicit `Class.forName("zorahm.zochat.libs.mysql.cj.jdbc.Driver")` in Database.java
+- MySQL driver is relocated by Shadow — explicit `Class.forName("zorahm.zochat.libs.mysql.cj.jdbc.Driver")` in Database.kt
 
 ## Code Style
 
@@ -208,11 +217,17 @@ The code already says *what* it does — don't restate it in a comment. Comments
 
 Write the *why*: why this approach over the obvious one, why an edge case is handled, which bug/issue a workaround addresses. If a line of code is self-explanatory, leave it uncommented. Write comments in **English**.
 
-### Language: Kotlin for new code
+### Language: Kotlin throughout
 
-Write **new** files in **Kotlin** (`src/main/kotlin/...`). Existing Java files stay Java — edit them in place rather than converting wholesale. Java and Kotlin coexist in the same Gradle build (joint compilation): Kotlin can call Java and vice-versa. The kotlin-stdlib is bundled and relocated by Shadow (`zorahm.zochat.libs.kotlin`).
+Everything is **Kotlin** (`src/main/kotlin/...`, tests in `src/test/kotlin/...`) — write new code in Kotlin too. The kotlin-stdlib is bundled and relocated by Shadow (`zorahm.zochat.libs.kotlin`).
 
-For Kotlin classes consumed from Java, keep the Java-facing API stable: a `val isBlocked` Boolean property exposes `isBlocked()`, other `val`s expose `getX()`; use `@JvmStatic`/`@JvmOverloads` on companion functions that Java calls.
+Kotlin was adopted by porting a Java/Kotlin hybrid, so some API shapes still mirror their Java origins. Keep the conventions already in use:
+
+- Boolean properties keep the `is` prefix (`val isBlocked`, `val isAntiSpamEnabled`) so `if (x.isBlocked)` reads naturally.
+- Pure helpers that exist to be unit-tested live in a `companion object` (or an `object`) as `@JvmStatic` functions — e.g. `BannedWordsFilter.normalize`, `PlaceholderService.buildPattern`. Don't make them `internal`: Kotlin mangles `internal` names (`buildPattern$module`), which is pointless friction for the tests.
+- `@JvmOverloads` where a helper has defaulted parameters (`BannedWordsFilter.normalize(text, leet = true)`).
+- Bukkit `getX()` accessors map to properties (`player.location`, `config.sayFormat`); `setX()` to assignments (`event.isCancelled = true`).
+- `Database.conn()`/`Database.logger` are `internal` — there is no package-private in Kotlin, and only the two repositories need them.
 
 ## Dependencies
 

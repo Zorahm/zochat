@@ -12,7 +12,7 @@ import kotlin.math.ceil
  */
 class CooldownService {
 
-    enum class Channel { LOCAL, GLOBAL, PRIVATE }
+    enum class Channel { LOCAL, GLOBAL, PRIVATE, BUBBLE }
 
     private val times = ConcurrentHashMap<UUID, ConcurrentHashMap<Channel, Long>>()
 

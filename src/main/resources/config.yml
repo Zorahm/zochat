@@ -7,7 +7,7 @@ debug-mode: false
 # Message language
 message: ru
 
-# System message prefix (applied to all messages except /chat help)
+# Prefix for /chat command replies (reload, unknown subcommand)
 message-prefix: "<#d45079>zoChat</#d45079> <#c0c0c0>•</#c0c0c0> "
 
 # ───── Anti-spam settings ─────
@@ -16,6 +16,7 @@ anti-spam:
   local-cooldown: 3                    # Cooldown for local chat (in seconds)
   global-cooldown: 5                   # Cooldown for global chat (in seconds)
   private-cooldown: 2                  # Cooldown for private messages (in seconds)
+  bubble-cooldown: 3                   # Cooldown for /bubble (in seconds)
   bypass-permission: "zochat.spam.bypass" # Permission to bypass anti-spam
 
 # ───── Banned words filter settings ─────
@@ -32,29 +33,29 @@ mention:
   # Regular mention @PlayerName
   format: "<yellow><bold>@{player}</bold></yellow>"  # Mention highlight format
   sound: "ENTITY_EXPERIENCE_ORB_PICKUP"              # Mention sound
-  message: "<yellow>Тебя упомянули в чате!</yellow>" # Action Bar notification
+  # Action bar notification texts live in messages/messages_*.yml (mention.notify*)
 
   # @everyone mention - mentions all players on the server
   everyone-permission: "zochat.mention.everyone"    # Permission to use @everyone
   everyone-format: "<red><bold>@everyone</bold></red>"  # @everyone display format
-  everyone-message: "<red>Вас упомянули через @everyone!</red>"  # @everyone notification
 
   # @here mention - mentions nearby players
   here-permission: "zochat.mention.here"            # Permission to use @here
   here-format: "<gold><bold>@here</bold></gold>"    # @here display format
-  here-message: "<gold>Вас упомянули через @here!</gold>"  # @here notification
   here-radius: 100                                  # @here radius (in blocks)
 
 # ───── Local chat settings ─────
+# Chat, private-message and join/quit formats live in messages/messages_*.yml (formats.*),
+# so they follow the "message:" language.
+# With local chat on, plain chat goes local and "!message" goes global.
+# If BOTH local and global chat are disabled, zoChat leaves chat to vanilla.
 local-chat:
   enabled: true                        # Enable local chat
   radius: 50                           # Local chat radius
-  format: "<gradient:#55ff55:#aaffaa>[Локальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Chat format
 
 # ───── Global chat settings ─────
 global-chat:
-  enabled: true                        # Enable global chat
-  format: "<gradient:#ffaa33:#ffd700>[Глобальный]</gradient> <#c0c0c0>•</#c0c0c0> <#fcfcfc>{prefix}{suffix}{player}<#c0c0c0> › </#c0c0c0>{message}"  # Chat format
+  enabled: true                        # Enable global chat ("!message" and /g)
 
 # ───── /say formatting ─────
 say:
@@ -62,11 +63,6 @@ say:
   console-name: "Server"               # {player} name for /say from console/command blocks
   # Tokens: {player}, {message}. Player /say escapes the text (no injection); console /say parses it as MiniMessage.
   format: "<gradient:#ffaa33:#ffd700>[{player}]</gradient> <#c0c0c0>›</#c0c0c0> <white>{message}</white>"
-
-# ───── Private message settings ─────
-private-messages:
-  format: "<gradient:#f6a0d3:#b47ee5>✉️ ЛС от {player}:</gradient> <white>{message}</white>"  # Incoming message
-  reply-format: "<gradient:#b47ee5:#f6a0d3>✉️ Вы → {player}:</gradient> <white>{message}</white>"  # Outgoing message
 
 # ───── Offline message settings ─────
 offline-messages:
@@ -84,14 +80,12 @@ database:
 
 # ───── Join and quit message settings ─────
 join-message:
-  enabled: false                        # Enable join messages
-  format: "<gradient:#55ff55:#aaffaa>{player} присоединился к игре!</gradient>"  # Message format
+  enabled: false                        # Replace the join message (false = vanilla message untouched)
   sound: "ENTITY_PLAYER_LEVELUP"       # Join sound (optional)
   stealth-permission: "zochat.stealth.join"  # Permission to hide join message
 
 quit-message:
-  enabled: false                        # Enable quit messages
-  format: "<gradient:#ff5555:#ffaaaa>{player} покинул игру!</gradient>"  # Message format
+  enabled: false                        # Replace the quit message (false = vanilla message untouched)
   sound: "ENTITY_VILLAGER_NO"          # Quit sound (optional)
   stealth-permission: "zochat.stealth.quit"  # Permission to hide quit message
 
@@ -104,6 +98,6 @@ quit-message:
 # its own %zochat_...% placeholders for other plugins to read.
 placeholder-api:
   enabled: true                        # Master toggle for PlaceholderAPI integration
-  format: true                         # Expand %...% in chat formats (admin-controlled, safe)
+  format: true                         # Expand %...% in chat formats. Values are parsed as MiniMessage, so avoid placeholders that return player-typed text (e.g. nicknames)
   player-messages: false               # Expand %...% players type in their own messages (abuse risk — opt-in)
   player-permission: "zochat.placeholder.papi"  # Permission required for player-message expansion

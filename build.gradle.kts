@@ -19,8 +19,9 @@ kotlin {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://oss.sonatype.org/content/groups/public/")
-    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+    // PlaceholderAPI's repo moved to repo.helpch.at; the old extendedclip URL is now a 301 redirect
+    // that the Gradle resolver times out on. Resolve against the canonical host instead.
+    maven("https://repo.helpch.at/releases/")
 }
 
 configurations {
@@ -35,6 +36,8 @@ dependencies {
     implementation(kotlin("stdlib"))
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    // Paper provides SQLite at runtime; tests need the real driver to exercise the repositories.
+    testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
 }
 
 tasks.test { useJUnitPlatform() }
@@ -43,6 +46,10 @@ tasks.processResources {
     filteringCharset = "UTF-8"
     filesMatching("plugin.yml") { expand("version" to project.version) }
 }
+
+// The plain jar would land on the same zoChat-<version>.jar path as the shaded one (classifier ""),
+// and the result depended on which task ran last — an unshaded jar crashes on missing Kotlin.
+tasks.jar { enabled = false }
 
 tasks.shadowJar {
     archiveBaseName.set("zoChat")

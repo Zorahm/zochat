@@ -31,7 +31,11 @@ class ChatLogCommand(
             }
             chatLog.clearAll { count ->
                 Bukkit.getScheduler().runTask(plugin, Runnable {
-                    sender.sendMessage(mm.deserialize(messages.get("chatlog.cleared").replace("{count}", count.toString())))
+                    if (count == null) {
+                        sender.sendMessage(messages.component("chatlog.error"))
+                    } else {
+                        sender.sendMessage(mm.deserialize(messages.get("chatlog.cleared").replace("{count}", count.toString())))
+                    }
                 })
             }
             return true
@@ -48,13 +52,20 @@ class ChatLogCommand(
 
         chatLog.recentFor(playerUUID) { list ->
             Bukkit.getScheduler().runTask(plugin, Runnable {
+                if (list == null) {
+                    sender.sendMessage(messages.component("chatlog.error"))
+                    return@Runnable
+                }
                 val name = Bukkit.getOfflinePlayer(playerUUID).name ?: playerName
                 sender.sendMessage(mm.deserialize(messages.get("chatlog.header").replace("{player}", name)))
                 if (list.isEmpty()) {
                     sender.sendMessage(messages.component("chatlog.no-messages"))
                 } else {
                     list.forEach { msg ->
-                        sender.sendMessage(mm.deserialize(messages.get("chatlog.message").replace("{message}", msg)))
+                        // The log holds the player's literal text — escape it, or tags typed in chat
+                        // (<click:run_command:...>) would render and fire for the admin reading the log.
+                        val line = messages.get("chatlog.message").replace("{message}", mm.escapeTags(msg))
+                        sender.sendMessage(mm.deserialize(line))
                     }
                 }
             })
