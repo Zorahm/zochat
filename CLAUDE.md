@@ -13,7 +13,7 @@ zoChat is a Minecraft Paper plugin (Java 21, Paper API 1.21.10) that provides en
 ./gradlew clean build
 
 # Compiled JAR location
-build/libs/zoChat-3.0.0.jar
+build/libs/zoChat-3.0.1.jar
 
 # Run test server (requires Minecraft assets downloaded by run-paper)
 ./gradlew runServer
